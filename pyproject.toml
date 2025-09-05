@@ -1,0 +1,18 @@
+[project]
+name = "mcbase64x32"
+version = "0.1.0"
+description = "Base64x32 implementation specialized to maximize data stored in a Minecraft book"
+authors = [
+    {name = "ThorTuwy"},
+    {name = "victordlp8"},
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+mcbase64x32 = "mcbase64x32.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
