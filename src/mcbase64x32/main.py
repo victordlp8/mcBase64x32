@@ -1,14 +1,18 @@
 import json
+from pathlib import Path
 
+# Get the directory where this module is located
+module_dir = Path(__file__).parent
+json_path = module_dir / "utils" / "baseList.json"
 
-with open("src/mcbase64x32/utils/baseList.json", "r", encoding="utf-8") as f:
+with open(json_path, "r", encoding="utf-8") as f:
     base_dict = json.load(f)
 
 
-def encode_string_binary(text):
-    """Encodes a string by converting it to binary and grouping it into 11-bit blocks"""
+def encode(payload: bytes) -> str:
+    """Encodes into mcBase64x32. Encodes a string by converting it to binary and grouping it into 11-bit blocks"""
     # Convert text to binary
-    binary_str = "".join(format(ord(char), "08b") for char in text)
+    binary_str = "".join(format(byte, "08b") for byte in payload)
 
     # Pad with zeros if not a multiple of 11
     padding = (11 - (len(binary_str) % 11)) % 11
@@ -24,14 +28,14 @@ def encode_string_binary(text):
     return encoded
 
 
-def decode_string_binary(encoded_text):
-    """Decodes a string that was encoded with the 11-bit binary method"""
+def decode(text_in_mcbase64x32: str) -> bytes:
+    """Decodes from mcBase64x32. Decodes a string that was encoded with the 11-bit binary method"""
     # Convert each pair of encoded characters back to their decimal value
     binary_str = ""
     i = 0
-    while i < len(encoded_text):
+    while i < len(text_in_mcbase64x32):
         # Take 2 characters (each encoding uses 2 characters)
-        char_pair = encoded_text[i : i + 2]
+        char_pair = text_in_mcbase64x32[i : i + 2]
         if char_pair in base_dict["decode"]:
             decimal_value = base_dict["decode"][char_pair]
             binary_chunk = format(
@@ -47,13 +51,13 @@ def decode_string_binary(encoded_text):
         if len(byte_chunk) == 8:  # Only process complete blocks
             decoded += chr(int(byte_chunk, 2))
 
-    return decoded
+    return decoded.encode()
 
 
 def main():
     message = "Hello from mcbase64x32!"
-    encoded = encode_string_binary(message)
-    decoded = decode_string_binary(encoded)
+    encoded = encode(message.encode())
+    decoded = decode(encoded).decode()
 
     print(f"{message} -> {encoded}    -> {decoded}")
     print(f"Compression: {len(message)} chars -> {len(encoded)} chars")
