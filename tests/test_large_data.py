@@ -6,9 +6,7 @@ including memory usage and performance characteristics.
 
 import os
 import pytest
-import random
 import time
-from typing import Generator
 import mcbase64x32
 
 
