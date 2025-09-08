@@ -14,24 +14,24 @@ class TestErrorHandling:
     def test_invalid_decode_input_type(self):
         """Test that decode function handles invalid input types gracefully."""
         with pytest.raises((TypeError, AttributeError)):
-            mcbase64x32.decode(123)  # Should not accept integers
+            mcbase64x32.decode(123)  # type: ignore # Should not accept integers
         
         with pytest.raises((TypeError, AttributeError)):
-            mcbase64x32.decode(None)  # Should not accept None
+            mcbase64x32.decode(None)  # type: ignore # Should not accept None
         
         with pytest.raises((TypeError, AttributeError)):
-            mcbase64x32.decode(b"bytes")  # Should not accept bytes
+            mcbase64x32.decode(b"bytes")  # type: ignore # Should not accept bytes
 
     def test_invalid_encode_input_type(self):
         """Test that encode function handles invalid input types gracefully."""
         with pytest.raises((TypeError, AttributeError)):
-            mcbase64x32.encode("string")  # Should not accept strings directly
+            mcbase64x32.encode("string")  # type: ignore # Should not accept strings directly
         
         with pytest.raises((TypeError, AttributeError)):
-            mcbase64x32.encode(123)  # Should not accept integers
+            mcbase64x32.encode(123)  # type: ignore # Should not accept integers
         
         with pytest.raises((TypeError, AttributeError)):
-            mcbase64x32.encode(None)  # Should not accept None
+            mcbase64x32.encode(None)  # type: ignore # Should not accept None
 
     def test_decode_empty_string(self):
         """Test decoding of empty string."""

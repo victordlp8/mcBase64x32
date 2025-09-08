@@ -75,7 +75,7 @@ def random_payload_generator(random_seed: int) -> Generator[bytes, None, None]:
     def generate_payload(size: int) -> bytes:
         return bytes([random.randint(0, 255) for _ in range(size)])
     
-    return generate_payload
+    return generate_payload # type: ignore
 
 
 @pytest.fixture(autouse=True)
