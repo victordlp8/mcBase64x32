@@ -15,6 +15,10 @@ with open(json_path, "r", encoding="utf-8") as f:
 ENCODE_ARRAY = np.array([base_dict["encode"][str(i)] for i in range(2048)], dtype=object)
 DECODE_TABLE = base_dict["decode"]
 
+# Pre-compute power arrays to avoid recalculation (HYPER optimization)
+POWERS_11 = 2 ** np.arange(10, -1, -1, dtype=np.int32)
+POWERS_8 = 2 ** np.arange(7, -1, -1, dtype=np.int32)
+
 MAX_BYTES_PER_PAGE = 694
 
 
@@ -50,9 +54,8 @@ def encode(payload: bytes) -> str:
     num_chunks = len(all_bits) // 11
     bit_chunks = all_bits[:num_chunks * 11].reshape(-1, 11)
     
-    # Convert binary chunks to decimal values vectorized
-    powers_of_2 = 2 ** np.arange(10, -1, -1)  # [1024, 512, 256, ..., 1]
-    decimal_values = np.dot(bit_chunks, powers_of_2).astype(np.int32)
+    # Convert binary chunks to decimal values using pre-computed powers
+    decimal_values = np.dot(bit_chunks, POWERS_11).astype(np.int32)
     
     # Use vectorized lookup
     encoded_chars = ENCODE_ARRAY[decimal_values]
@@ -103,10 +106,9 @@ def decode(text_in_mcbase64x32: str) -> bytes:
         padding = np.zeros(8 - remainder, dtype=np.uint8)
         data_bits = np.concatenate([data_bits, padding])
     
-    # Reshape to bytes and convert
+    # Reshape to bytes and convert using pre-computed powers
     byte_chunks = data_bits.reshape(-1, 8)
-    powers_of_2_byte = 2 ** np.arange(7, -1, -1)  # [128, 64, 32, ..., 1]
-    byte_values = np.dot(byte_chunks, powers_of_2_byte).astype(np.uint8)
+    byte_values = np.dot(byte_chunks, POWERS_8).astype(np.uint8)
     
     # Return only original length
     return bytes(byte_values[:original_length])
