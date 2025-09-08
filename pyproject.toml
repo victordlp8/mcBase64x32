@@ -22,3 +22,15 @@ packages = ["src/mcbase64x32"]
 
 [tool.hatch.build.targets.wheel.sources]
 "src" = ""
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-cov>=6.3.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.4.2",
+    "pytest-cov>=6.3.0",
+]
