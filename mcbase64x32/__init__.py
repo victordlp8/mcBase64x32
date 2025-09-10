@@ -6,8 +6,7 @@ for maximum performance when storing data in Minecraft books.
 
 __version__ = "0.1.0"
 
-from .main import MAX_BYTES_PER_PAGE
-from .mcbase64x32 import encode, decode
+from .main import MAX_BYTES_PER_PAGE, encode, decode
 
 
 __all__ = ["MAX_BYTES_PER_PAGE", "encode", "decode"]

@@ -34,7 +34,7 @@ fn decode_base(input: String) -> u16 {
 }
 
 #[pyfunction]
-fn encode(input: Vec<u8>) -> String {
+fn encode_rust(input: Vec<u8>) -> String {
     let mut output = String::new();
 
     let mut reader = BitReader::endian(&input[..], BigEndian);
@@ -59,7 +59,7 @@ fn encode(input: Vec<u8>) -> String {
 }
 
 #[pyfunction]
-fn decode(input: &str) -> Vec<u8> {
+fn decode_rust(input: &str) -> Vec<u8> {
     let mut raw_decoded: Vec<u16> = vec![];
     let inputs_chars: Vec<char> = input.chars().collect();
     for i in (0..inputs_chars.len()).step_by(2) {
@@ -87,7 +87,7 @@ fn decode(input: &str) -> Vec<u8> {
 /// A Python module for encoding and decoding using custom base64x32 algorithm
 #[pymodule]
 fn mcbase64x32(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(encode, m)?)?;
-    m.add_function(wrap_pyfunction!(decode, m)?)?;
+    m.add_function(wrap_pyfunction!(encode_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(decode_rust, m)?)?;
     Ok(())
 }
