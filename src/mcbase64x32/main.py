@@ -23,10 +23,7 @@ MAX_BYTES_PER_PAGE = 694
 
 
 def encode(payload: bytes) -> str:
-    """Encodes into mcBase64x32 using numpy vectorized operations."""
-    if not isinstance(payload, bytes):
-        raise TypeError(f"encode() expects bytes, got {type(payload).__name__}")
-    
+    """Encodes into mcBase64x32 using numpy vectorized operations."""    
     if not payload:
         return ""
     
@@ -64,10 +61,7 @@ def encode(payload: bytes) -> str:
 
 
 def decode(text_in_mcbase64x32: str) -> bytes:
-    """Decodes from mcBase64x32 using numpy vectorized operations."""
-    if not isinstance(text_in_mcbase64x32, str):
-        raise TypeError(f"decode() expects str, got {type(text_in_mcbase64x32).__name__}")
-    
+    """Decodes from mcBase64x32 using numpy vectorized operations."""    
     if not text_in_mcbase64x32:
         return b""
     
