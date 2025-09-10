@@ -48,7 +48,7 @@ pip install mcbase64x32
 git clone https://github.com/victordlp8/mcBase64x32.git
 cd mcBase64x32
 uv sync
-uv run pip install -e .
+uv tool install -e .
 ```
 
 ## Quick Start
