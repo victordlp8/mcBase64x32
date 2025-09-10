@@ -1,41 +1,35 @@
 [project]
 name = "mcbase64x32"
 version = "1.0.0"
-description = "A high-performance Base64x32 implementation specialized for maximizing data storage in Minecraft books using numpy vectorized operations."
+description = "A high-performance Base64x32 implementation specialized for maximizing data storage in Minecraft books written in Rust."
 authors = [
     {name = "ThorTuwy"},
     {name = "victordlp8"},
 ]
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = [
-    "numpy>=2.3.2",
-]
+dependencies = []
 
 [project.scripts]
 mcbase64x32 = "mcbase64x32.main:main"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/mcbase64x32"]
-
-[tool.hatch.build.targets.wheel.sources]
-"src" = ""
-
-[tool.hatch.build.targets.sdist]
-only-include = ["src/mcbase64x32"]
+[tool.maturin]
+module-name = "mcbase64x32"
 
 [dependency-groups]
 dev = [
     "pytest>=8.4.2",
     "pytest-cov>=6.3.0",
+    "maturin>=1.9.4",
 ]
 
 [tool.uv]
 dev-dependencies = [
     "pytest>=8.4.2",
     "pytest-cov>=6.3.0",
+    "maturin>=1.9.4",
 ]
