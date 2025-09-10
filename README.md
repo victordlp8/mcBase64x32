@@ -1,6 +1,11 @@
-![PyPI](https://img.shields.io/pypi/v/mcbase64x32?label=pypi%20mcbase64x32)
-![PyPI - Downloads](https://img.shields.io/pypi/dm/mcbase64x32)
-![Pepy Total Downloads](https://img.shields.io/pepy/dt/mcbase64x32)
+<p align="center">
+    <a href="https://pypi.org/project/mcbase64x32/" alt="PyPi Website">
+        <img src="https://img.shields.io/pypi/v/mcbase64x32?label=pypi%20mcbase64x32" /></a>
+    <a href="https://pypi.org/project/mcbase64x32/" alt="Downloads per month">
+        <img src="https://img.shields.io/pypi/dm/mcbase64x32" /></a>
+    <a href="https://pypi.org/project/mcbase64x32/" alt="Total downloads">
+        <img src="https://img.shields.io/pepy/dt/mcbase64x32" /></a>
+</p>
 
 # mcBase64x32
 
