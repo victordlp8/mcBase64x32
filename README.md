@@ -11,6 +11,12 @@
 
 A high-performance Base64x32 implementation specialized for maximizing data storage in Minecraft books using numpy vectorized operations.
 
+<p align="center">
+    <img width="438" height="540" alt="Minecraft book page filled with mcbase64x32 characters" src="https://github.com/user-attachments/assets/2fcb931c-4512-4465-9734-2a9a5b19f388" />
+    <br>
+    <sub><em>Minecraft book page filled with mcbase64x32 characters</em></sub>
+</p>
+
 ## Overview
 
 mcBase64x32 is a custom encoding scheme designed specifically for storing data efficiently in Minecraft books. It uses a 64x32-2-character alphabet using Unicode characters of pixel width of 1 and 2 and by combining these characters we achieve optimal compression while keeping the Minecraft book limits of characters and pixels.
@@ -49,6 +55,7 @@ uv run pip install -e .
 
 ```python
 import mcbase64x32
+
 
 # Encode data
 data = b"Hello, Minecraft World!"
