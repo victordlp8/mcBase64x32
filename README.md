@@ -1,3 +1,7 @@
+![PyPI](https://img.shields.io/pypi/v/mcbase64x32?label=pypi%20mcbase64x32)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/mcbase64x32)
+![Pepy Total Downloads](https://img.shields.io/pepy/dt/mcbase64x32)
+
 # mcBase64x32
 
 A high-performance Base64x32 implementation specialized for maximizing data storage in Minecraft books using numpy vectorized operations.
