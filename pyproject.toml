@@ -1,7 +1,7 @@
 [project]
 name = "mcbase64x32"
 version = "1.0.0"
-description = "Base64x32 implementation specialized to maximize data stored in a Minecraft book"
+description = "A high-performance Base64x32 implementation specialized for maximizing data storage in Minecraft books using numpy vectorized operations."
 authors = [
     {name = "ThorTuwy"},
     {name = "victordlp8"},
