@@ -120,7 +120,7 @@ def main():
     encoded = encode(message.encode())
     decoded = decode(encoded).decode()
 
-    print(f"{message} -> {encoded} -> {decoded}")
+    print(f"{message} -> {encoded}  -> {decoded}")
     print(f"Compression: {len(message)} chars -> {len(encoded)} chars")
 
 

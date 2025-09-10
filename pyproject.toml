@@ -1,6 +1,6 @@
 [project]
 name = "mcbase64x32"
-version = "0.1.0"
+version = "1.0.0"
 description = "Base64x32 implementation specialized to maximize data stored in a Minecraft book"
 authors = [
     {name = "ThorTuwy"},
@@ -24,6 +24,9 @@ packages = ["src/mcbase64x32"]
 
 [tool.hatch.build.targets.wheel.sources]
 "src" = ""
+
+[tool.hatch.build.targets.sdist]
+only-include = ["src/mcbase64x32"]
 
 [dependency-groups]
 dev = [
