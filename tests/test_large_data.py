@@ -13,7 +13,6 @@ import mcbase64x32
 class TestLargeData:
     """Test handling of large binary data."""
 
-    @pytest.mark.slow
     @pytest.mark.parametrize("size_mb", [1, 5, 10, 50])
     def test_large_binary_data(self, size_mb: int):
         """Test encoding/decoding of large binary data (1MB, 5MB, 10MB)."""
@@ -44,7 +43,6 @@ class TestLargeData:
         assert payload == decoded, f"Round-trip failed for {size_mb}MB data"
         print(f"✅ {size_mb}MB test passed!")
 
-    @pytest.mark.slow
     def test_extremely_large_data_50mb(self):
         """Test 50MB data - only run if explicitly requested."""
         size_bytes = 50 * 1024 * 1024  # 50MB
@@ -73,7 +71,6 @@ class TestLargeData:
         assert payload == decoded, "Round-trip failed for 50MB data"
         print("✅ 50MB test passed!")
 
-    @pytest.mark.slow
     def test_memory_efficiency_pattern(self):
         """Test memory efficiency with repetitive patterns."""
         # Create a 5MB file with repetitive pattern
@@ -147,7 +144,6 @@ class TestLargeData:
                 f"{size_ratio}x size increase caused {time_ratio:.2f}x time increase"
             )
 
-    @pytest.mark.slow
     def test_edge_case_sizes(self):
         """Test edge cases around specific sizes that might cause issues."""
         edge_sizes = [

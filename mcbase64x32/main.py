@@ -14,7 +14,7 @@ def decode(text_in_mcbase64x32: str) -> bytes:
 
 def main():
     """Demo function showing basic usage."""
-    message = "Hello from mcbase64x32!"
+    message = "aaaaaaaaaa"
     encoded = encode(message.encode())
     decoded = decode(encoded).decode()
 
