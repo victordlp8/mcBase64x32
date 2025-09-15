@@ -14,11 +14,11 @@ def decode(text_in_mcbase64x32: str) -> bytes:
 
 def main():
     """Demo function showing basic usage."""
-    message = "aaaaaaaaaa"
+    message = "Hello World using mcbase64x32!"
     encoded = encode(message.encode())
     decoded = decode(encoded).decode()
 
-    print(f"{message} -> {encoded}    -> {decoded}")
+    print(f"{message} -> {encoded} -> {decoded}")
     print(f"Compression: {len(message)} chars -> {len(encoded)} chars")
     print("Using Rust: True")
 
