@@ -1,6 +1,6 @@
 [project]
 name = "mcbase64x32"
-version = "1.0.0"
+version = "2.0.0"
 description = "A high-performance Base64x32 implementation specialized for maximizing data storage in Minecraft books written in Rust."
 authors = [
     {name = "ThorTuwy"},
