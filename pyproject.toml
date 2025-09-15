@@ -19,6 +19,8 @@ build-backend = "maturin"
 
 [tool.maturin]
 module-name = "mcbase64x32"
+python-source = "python"
+manylinux = "auto"
 
 [dependency-groups]
 dev = [
