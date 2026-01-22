@@ -1,6 +1,6 @@
 [project]
 name = "mcbase64x32"
-version = "1.0.0"
+version = "2.0.0"
 description = "A high-performance Base64x32 implementation specialized for maximizing data storage in Minecraft books written in Rust."
 authors = [
     {name = "ThorTuwy"},
@@ -9,6 +9,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = []
+license = {text = "MIT"}
 
 [project.scripts]
 mcbase64x32 = "mcbase64x32.main:main"
@@ -19,16 +20,12 @@ build-backend = "maturin"
 
 [tool.maturin]
 module-name = "mcbase64x32"
+include = [
+    { path = "mcbase64x32/utils/*.json", format = ["sdist", "wheel"] }
+]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.4.2",
-    "pytest-cov>=6.3.0",
-    "maturin>=1.9.4",
-]
-
-[tool.uv]
-dev-dependencies = [
     "pytest>=8.4.2",
     "pytest-cov>=6.3.0",
     "maturin>=1.9.4",
