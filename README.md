@@ -9,7 +9,7 @@
 
 # mcBase64x32
 
-A high-performance Base64x32 implementation specialized for maximizing data storage in Minecraft books using numpy vectorized operations.
+A high-performance Base64x32 implementation specialized for maximizing data storage in Minecraft books, written in Rust for maximum performance.
 
 <p align="center">
     <img width="438" height="540" alt="Minecraft book page filled with mcbase64x32 characters" src="https://github.com/user-attachments/assets/2fcb931c-4512-4465-9734-2a9a5b19f388" />
@@ -25,8 +25,9 @@ We basically use a bunch of 1 and 2 pixel width Unicode characters to build 2048
 
 ## Features
 
-- **High Performance**: Uses numpy vectorized operations for ultra-fast encoding/decoding
+- **High Performance**: Implemented in Rust for ultra-fast encoding/decoding
 - **Minecraft Optimized**: Designed specifically for maximum data storage in Minecraft books
+- **Zero Dependencies**: No external Python dependencies required
 
 ## Installation
 
@@ -114,14 +115,14 @@ mcBase64x32 uses a custom encoding scheme that:
 2. **Maps to Unicode characters**: Uses a custom built 64x32-2-character alphabet made of pairs of Unicode characters
 3. **Optimizes for Minecraft**: Designed specifically for maximum data storage in Minecraft books
 4. **Includes dynamic length header**: up to 32-bit length prefix ensures proper decoding
-5. **Uses vectorized operations**: numpy arrays for maximum performance
+5. **Rust-powered**: Compiled Rust extension for maximum performance
 
 ## Performance
 
 The implementation is optimized for speed using:
 
-- **Numpy vectorization**: All operations use numpy arrays for maximum performance
-- **Pre-computed lookup tables**: Character mappings are pre-calculated
+- **Rust compilation**: Native compiled code for maximum performance
+- **Pre-computed lookup tables**: Character mappings are pre-calculated at compile time
 - **Bit manipulation**: Efficient binary operations for encoding/decoding
 - **Memory optimization**: Minimal memory allocations during processing
 
@@ -143,7 +144,7 @@ uv run pytest --cov=mcbase64x32
 ## Requirements
 
 - Python >= 3.13
-- numpy >= 2.3.2
+- No external dependencies required
 
 ## Development
 
