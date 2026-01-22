@@ -1,6 +1,4 @@
-# .github/workflows/publish-with-uv.yml
-
-name: Python Package UV
+name: Publish to PyPI
 
 on:
   push:
@@ -10,11 +8,15 @@ on:
 
 permissions:
   id-token: write
+  contents: read
 
 jobs:
-  build-and-publish:
-    name: Build and Publish to PyPI
-    runs-on: ubuntu-latest
+  build-wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v4
@@ -22,11 +24,62 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
-      - name: Install the project
-        run: uv sync --locked --all-extras
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out dist
+          manylinux: auto
+        env:
+          MATURIN_PEP517_ARGS: --locked
 
-      - name: Build package
-        run: uv build
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: dist
 
-      - name: Publish package to PyPI using OIDC
+  build-sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Build sdist
+        run: uv build --sdist --out dist
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+  publish:
+    name: Publish to PyPI
+    needs: [build-wheels, build-sdist]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mcbase64x32
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Publish to PyPI
         run: uv publish
