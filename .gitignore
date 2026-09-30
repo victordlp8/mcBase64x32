@@ -76,6 +76,10 @@ docs/_build/
 # Local issue tracker and scratch files
 .scratch/
 
+# Local agent workspace files
+.codegraph/
+AGENTS.md
+
 # PyBuilder
 .pybuilder/
 target/
