@@ -44,7 +44,7 @@ class TestLargeData:
         print(f"✅ {size_mb}MB test passed!")
 
     def test_extremely_large_data_50mb(self):
-        """Test 50MB data - only run if explicitly requested."""
+        """Test a second 50MB payload round-trip in the default suite."""
         size_bytes = 50 * 1024 * 1024  # 50MB
         print(f"\nTesting 50MB ({size_bytes:,} bytes)...")
         
