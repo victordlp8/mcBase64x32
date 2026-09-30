@@ -1,4 +1,4 @@
-"""Large data stress tests for mcbase64x32 library.
+"""Large data stress tests for bookette library.
 
 This module tests the library's ability to handle large binary payloads
 including memory usage and performance characteristics.
@@ -7,7 +7,7 @@ including memory usage and performance characteristics.
 import os
 import pytest
 import time
-import mcbase64x32
+import bookette
 
 
 class TestLargeData:
@@ -27,7 +27,7 @@ class TestLargeData:
         
         # Test encoding
         start_time = time.time()
-        encoded = mcbase64x32.encode(payload)
+        encoded = bookette.encode(payload)
         encode_time = time.time() - start_time
         print(f"Encoding took: {encode_time:.2f}s")
         print(f"Encoded size: {len(encoded):,} characters")
@@ -35,7 +35,7 @@ class TestLargeData:
         
         # Test decoding
         start_time = time.time()
-        decoded = mcbase64x32.decode(encoded)
+        decoded = bookette.decode(encoded)
         decode_time = time.time() - start_time
         print(f"Decoding took: {decode_time:.2f}s")
         
@@ -56,14 +56,14 @@ class TestLargeData:
         
         # Test encoding
         start_time = time.time()
-        encoded = mcbase64x32.encode(payload)
+        encoded = bookette.encode(payload)
         encode_time = time.time() - start_time
         print(f"Encoding took: {encode_time:.2f}s")
         print(f"Encoded size: {len(encoded):,} characters")
         
         # Test decoding
         start_time = time.time()
-        decoded = mcbase64x32.decode(encoded)
+        decoded = bookette.decode(encoded)
         decode_time = time.time() - start_time
         print(f"Decoding took: {decode_time:.2f}s")
         
@@ -74,7 +74,7 @@ class TestLargeData:
     def test_memory_efficiency_pattern(self):
         """Test memory efficiency with repetitive patterns."""
         # Create a 5MB file with repetitive pattern
-        pattern = b"mcbase64x32_test_pattern_" * 100  # ~2.5KB pattern
+        pattern = b"bookette_test_pattern_" * 100  # ~2.5KB pattern
         size_target = 5 * 1024 * 1024  # 5MB
         repeats = size_target // len(pattern)
         payload = pattern * repeats
@@ -82,11 +82,11 @@ class TestLargeData:
         print(f"\nTesting repetitive pattern: {len(payload):,} bytes")
         
         start_time = time.time()
-        encoded = mcbase64x32.encode(payload)
+        encoded = bookette.encode(payload)
         encode_time = time.time() - start_time
         
         start_time = time.time()
-        decoded = mcbase64x32.decode(encoded)
+        decoded = bookette.decode(encoded)
         decode_time = time.time() - start_time
         
         print(f"Pattern encoding: {encode_time:.2f}s")
@@ -106,12 +106,12 @@ class TestLargeData:
             
             # Measure encoding time
             start_time = time.time()
-            encoded = mcbase64x32.encode(payload)
+            encoded = bookette.encode(payload)
             encode_time = time.time() - start_time
             
             # Measure decoding time
             start_time = time.time()
-            decoded = mcbase64x32.decode(encoded)
+            decoded = bookette.decode(encoded)
             decode_time = time.time() - start_time
             
             # Verify integrity
@@ -156,8 +156,8 @@ class TestLargeData:
         for size in edge_sizes:
             payload = os.urandom(size)
             
-            encoded = mcbase64x32.encode(payload)
-            decoded = mcbase64x32.decode(encoded)
+            encoded = bookette.encode(payload)
+            decoded = bookette.decode(encoded)
             
             assert payload == decoded, f"Round-trip failed for edge case size {size}"
             

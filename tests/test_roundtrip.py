@@ -1,4 +1,4 @@
-"""Comprehensive round-trip tests for mcbase64x32 library.
+"""Comprehensive round-trip tests for bookette library.
 
 This module tests the core functionality of encoding and decoding binary data
 to ensure no data corruption occurs during round-trip operations.
@@ -8,7 +8,7 @@ import pytest
 import random
 from typing import List, Dict, Any
 
-import mcbase64x32
+import bookette
 
 
 class TestRoundTrip:
@@ -19,8 +19,8 @@ class TestRoundTrip:
         # Original failing case from bug report
         payload = bytes.fromhex("15face70000001789c0b492d2e5128ce4dccc95148cbcc495548cb2f5248494d2a4d4fcfcc4be7e50200b5560ae4")
         
-        encoded = mcbase64x32.encode(payload)
-        decoded = mcbase64x32.decode(encoded)
+        encoded = bookette.encode(payload)
+        decoded = bookette.decode(encoded)
         
         assert payload == decoded, (
             f"Round-trip failed for known failure case:\n"
@@ -40,8 +40,8 @@ class TestRoundTrip:
         
         for hex_payload in test_cases:
             payload = bytes.fromhex(hex_payload)
-            encoded = mcbase64x32.encode(payload)
-            decoded = mcbase64x32.decode(encoded)
+            encoded = bookette.encode(payload)
+            decoded = bookette.decode(encoded)
             
             assert payload == decoded, (
                     f"Round-trip failed for {hex_payload}:\n"
@@ -62,8 +62,8 @@ class TestRoundTrip:
         
         for hex_payload in test_cases:
             payload = bytes.fromhex(hex_payload)
-            encoded = mcbase64x32.encode(payload)
-            decoded = mcbase64x32.decode(encoded)
+            encoded = bookette.encode(payload)
+            decoded = bookette.decode(encoded)
             
             assert payload == decoded, (
                     f"Round-trip failed for edge case {hex_payload}:\n"
@@ -80,8 +80,8 @@ class TestRoundTrip:
             payload = bytes([byte_val])
             
             try:
-                encoded = mcbase64x32.encode(payload)
-                decoded = mcbase64x32.decode(encoded)
+                encoded = bookette.encode(payload)
+                decoded = bookette.decode(encoded)
                 
                 if payload != decoded:
                     failures.append({
@@ -110,8 +110,8 @@ class TestRoundTrip:
             payload = bytes([byte_val])
             
             try:
-                encoded = mcbase64x32.encode(payload)
-                decoded = mcbase64x32.decode(encoded)
+                encoded = bookette.encode(payload)
+                decoded = bookette.decode(encoded)
                 
                 if payload != decoded:
                     failures.append({
@@ -143,8 +143,8 @@ class TestRoundTrip:
             payload = bytes([random.randint(0, 255) for _ in range(test_size)])
             
             try:
-                encoded = mcbase64x32.encode(payload)
-                decoded = mcbase64x32.decode(encoded)
+                encoded = bookette.encode(payload)
+                decoded = bookette.decode(encoded)
                 
                 if payload != decoded:
                     failures.append({
@@ -171,8 +171,8 @@ class TestRoundTrip:
     def test_empty_payload(self):
         """Test encoding/decoding of empty payload."""
         payload = b""
-        encoded = mcbase64x32.encode(payload)
-        decoded = mcbase64x32.decode(encoded)
+        encoded = bookette.encode(payload)
+        decoded = bookette.decode(encoded)
         
         assert payload == decoded, "Empty payload round-trip failed"
 
@@ -180,8 +180,8 @@ class TestRoundTrip:
         """Test all single-byte payloads."""
         for byte_val in range(256):
                 payload = bytes([byte_val])
-                encoded = mcbase64x32.encode(payload)
-                decoded = mcbase64x32.decode(encoded)
+                encoded = bookette.encode(payload)
+                decoded = bookette.decode(encoded)
                 
                 assert payload == decoded, (
                     f"Single byte {byte_val:02x} round-trip failed:\n"
@@ -205,8 +205,8 @@ class TestRoundTrip:
         ]
         
         for i, payload in enumerate(test_patterns):
-                encoded = mcbase64x32.encode(payload)
-                decoded = mcbase64x32.decode(encoded)
+                encoded = bookette.encode(payload)
+                decoded = bookette.decode(encoded)
                 
                 assert payload == decoded, (
                     f"Metadata-like pattern {i} round-trip failed:\n"
@@ -226,8 +226,8 @@ class TestRoundTrip:
         
         for original_hex, corrupted_hex in corruption_tests:
                 payload = bytes.fromhex(original_hex)
-                encoded = mcbase64x32.encode(payload)
-                decoded = mcbase64x32.decode(encoded)
+                encoded = bookette.encode(payload)
+                decoded = bookette.decode(encoded)
                 
                 # The decoded should NOT contain the corrupted UTF-8 patterns
                 decoded_hex = decoded.hex()

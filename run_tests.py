@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test runner script for mcbase64x32 library.
+"""Test runner script for bookette library.
 
 This script provides an easy way to run all tests with different configurations.
 """
@@ -30,7 +30,7 @@ def run_command(cmd: list[str], description: str) -> bool:
 
 def main():
     """Main test runner function."""
-    print("🧪 mcbase64x32 Test Runner")
+    print("🧪 Bookette Test Runner")
     print("=" * 60)
     
     # Check if we're in the right directory
@@ -55,7 +55,7 @@ def main():
         (["uv", "run", "pytest", "tests/test_basic_functionality.py", "-v"], "Basic functionality tests"),
         (["uv", "run", "pytest", "tests/test_roundtrip.py", "-v"], "Round-trip tests"),
         (["uv", "run", "pytest", "tests/test_error_handling.py", "-v"], "Error handling tests"),
-        (["uv", "run", "pytest", "tests/", "--cov=src/mcbase64x32", "--cov-report=term-missing"], "Tests with coverage"),
+        (["uv", "run", "pytest", "tests/", "--cov=bookette", "--cov-report=term-missing"], "Tests with coverage"),
         (["uv", "run", "pytest", "tests/test_roundtrip.py::TestRoundTrip::test_known_failure_case", "-v"], "Known failure case test"),
     ]
     

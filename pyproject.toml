@@ -1,6 +1,6 @@
 [project]
-name = "mcbase64x32"
-version = "2.0.1"
+name = "bookette"
+version = "3.0.0"
 description = "A high-performance Base64x32 implementation specialized for maximizing data storage in Minecraft books written in Rust."
 authors = [
     {name = "ThorTuwy"},
@@ -12,17 +12,14 @@ dependencies = []
 license = {text = "MIT"}
 
 [project.scripts]
-mcbase64x32 = "mcbase64x32.main:main"
+bookette = "bookette.main:main"
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [tool.maturin]
-module-name = "mcbase64x32"
-include = [
-    { path = "mcbase64x32/utils/*.json", format = ["sdist", "wheel"] }
-]
+module-name = "bookette"
 
 [dependency-groups]
 dev = [

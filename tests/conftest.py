@@ -1,4 +1,4 @@
-"""Pytest configuration and fixtures for mcbase64x32 tests."""
+"""Pytest configuration and fixtures for bookette tests."""
 
 import pytest
 import random

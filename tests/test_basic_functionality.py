@@ -1,11 +1,11 @@
-"""Basic functionality tests for mcbase64x32 library.
+"""Basic functionality tests for bookette library.
 
 This module tests the basic encoding/decoding functionality and edge cases
 to ensure the library works correctly for various input types.
 """
 
 import pytest
-import mcbase64x32
+import bookette
 
 
 class TestBasicFunctionality:
@@ -15,7 +15,7 @@ class TestBasicFunctionality:
         """Test encoding and decoding of text strings."""
         test_strings = [
             "Hello, World!",
-            "mcbase64x32",
+            "bookette",
             "Test with special chars: !@#$%^&*()",
             "Unicode: ñáéíóú",
             "Numbers: 1234567890",
@@ -27,8 +27,8 @@ class TestBasicFunctionality:
         
         for text in test_strings:
                 payload = text.encode('utf-8')
-                encoded = mcbase64x32.encode(payload)
-                decoded = mcbase64x32.decode(encoded)
+                encoded = bookette.encode(payload)
+                decoded = bookette.decode(encoded)
                 decoded_text = decoded.decode('utf-8')
                 
                 assert text == decoded_text, (
@@ -52,8 +52,8 @@ class TestBasicFunctionality:
         ]
         
         for data in test_data:
-                encoded = mcbase64x32.encode(data)
-                decoded = mcbase64x32.decode(encoded)
+                encoded = bookette.encode(data)
+                decoded = bookette.decode(encoded)
                 
                 assert data == decoded, (
                     f"Binary data round-trip failed for {data.hex()}:\n"
@@ -62,23 +62,18 @@ class TestBasicFunctionality:
                     f"Encoded:  {repr(encoded)}"
                 )
 
-    def test_max_bytes_per_page_constant(self):
-        """Test that MAX_BYTES_PER_PAGE constant is accessible."""
-        assert hasattr(mcbase64x32, 'MAX_BYTES_PER_PAGE')
-        assert isinstance(mcbase64x32.MAX_BYTES_PER_PAGE, int)
-        assert mcbase64x32.MAX_BYTES_PER_PAGE > 0
 
     def test_encode_function_signature(self):
         """Test that encode function accepts bytes and returns string."""
         payload = b"test"
-        result = mcbase64x32.encode(payload)
+        result = bookette.encode(payload)
         
         assert isinstance(result, str), f"encode() should return str, got {type(result)}"
 
     def test_decode_function_signature(self):
         """Test that decode function accepts string and returns bytes."""
-        encoded = mcbase64x32.encode(b"test")
-        result = mcbase64x32.decode(encoded)
+        encoded = bookette.encode(b"test")
+        result = bookette.decode(encoded)
         
         assert isinstance(result, bytes), f"decode() should return bytes, got {type(result)}"
 
@@ -86,34 +81,34 @@ class TestBasicFunctionality:
         """Test handling of empty inputs."""
         # Empty bytes
         empty_bytes = b""
-        encoded = mcbase64x32.encode(empty_bytes)
-        decoded = mcbase64x32.decode(encoded)
+        encoded = bookette.encode(empty_bytes)
+        decoded = bookette.decode(encoded)
         assert empty_bytes == decoded
 
     def test_single_character_encoding(self):
         """Test encoding of single characters."""
         for i in range(256):
             char = bytes([i])
-            encoded = mcbase64x32.encode(char)
-            decoded = mcbase64x32.decode(encoded)
+            encoded = bookette.encode(char)
+            decoded = bookette.decode(encoded)
             assert char == decoded, f"Single character {i:02x} encoding failed"
 
     def test_encoding_idempotency(self):
         """Test that encoding the same data multiple times produces the same result."""
         payload = b"test payload"
         
-        encoded1 = mcbase64x32.encode(payload)
-        encoded2 = mcbase64x32.encode(payload)
+        encoded1 = bookette.encode(payload)
+        encoded2 = bookette.encode(payload)
         
         assert encoded1 == encoded2, "Encoding should be idempotent"
 
     def test_decoding_idempotency(self):
         """Test that decoding the same encoded string multiple times produces the same result."""
         payload = b"test payload"
-        encoded = mcbase64x32.encode(payload)
+        encoded = bookette.encode(payload)
         
-        decoded1 = mcbase64x32.decode(encoded)
-        decoded2 = mcbase64x32.decode(encoded)
+        decoded1 = bookette.decode(encoded)
+        decoded2 = bookette.decode(encoded)
         
         assert decoded1 == decoded2, "Decoding should be idempotent"
 
@@ -124,8 +119,8 @@ class TestBasicFunctionality:
         # Multiple encode/decode cycles
         current = payload
         for i in range(5):
-            encoded = mcbase64x32.encode(current)
-            current = mcbase64x32.decode(encoded)
+            encoded = bookette.encode(current)
+            current = bookette.decode(encoded)
         
         assert payload == current, f"Multiple round-trips failed after 5 cycles"
 
@@ -135,7 +130,7 @@ class TestBasicFunctionality:
         
         lengths = []
         for _ in range(10):
-            encoded = mcbase64x32.encode(payload)
+            encoded = bookette.encode(payload)
             lengths.append(len(encoded))
         
         assert all(length == lengths[0] for length in lengths), "Encoding length should be consistent"
@@ -154,8 +149,8 @@ class TestBasicFunctionality:
         ]
         
         for sequence in test_sequences:
-                encoded = mcbase64x32.encode(sequence)
-                decoded = mcbase64x32.decode(encoded)
+                encoded = bookette.encode(sequence)
+                decoded = bookette.decode(encoded)
                 
                 assert sequence == decoded, (
                     f"High-bit sequence round-trip failed for {sequence.hex()}:\n"
