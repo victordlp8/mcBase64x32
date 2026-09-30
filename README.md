@@ -1,130 +1,100 @@
 <p align="center">
-    <a href="https://pypi.org/project/mcbase64x32/" alt="PyPi Website">
-        <img src="https://img.shields.io/pypi/v/mcbase64x32?label=pypi%20mcbase64x32" /></a>
-    <a href="https://pypi.org/project/mcbase64x32/" alt="Downloads per month">
-        <img src="https://img.shields.io/pypi/dm/mcbase64x32" /></a>
-    <a href="https://pypi.org/project/mcbase64x32/" alt="Total downloads">
-        <img src="https://img.shields.io/pepy/dt/mcbase64x32" /></a>
+    <a href="https://pypi.org/project/bookette/" alt="PyPi Website">
+        <img src="https://img.shields.io/pypi/v/bookette?label=pypi%20bookette" /></a>
+    <a href="https://pypi.org/project/bookette/" alt="Downloads per month">
+        <img src="https://img.shields.io/pypi/dm/bookette" /></a>
+    <a href="https://pypi.org/project/bookette/" alt="Total downloads">
+        <img src="https://img.shields.io/pepy/dt/bookette" /></a>
 </p>
 
-# mcBase64x32
+# Bookette
+Bookette v3.0.0, previously mcBase64x32.
 
-A high-performance Base64x32 implementation specialized for maximizing data storage in Minecraft books, written in Rust for maximum performance.
+A Rust package that encodes binary data as Unicode text for Minecraft books.
 
 <p align="center">
-    <img width="438" height="540" alt="Minecraft book page filled with mcbase64x32 characters" src="https://github.com/user-attachments/assets/2fcb931c-4512-4465-9734-2a9a5b19f388" />
+    <img width="438" height="540" alt="Minecraft book page filled with Bookette characters" src="https://github.com/user-attachments/assets/2fcb931c-4512-4465-9734-2a9a5b19f388" />
     <br>
-    <sub><em>Minecraft book page filled with mcbase64x32 characters</em></sub>
+    <sub><em>Minecraft book page filled with Bookette characters</em></sub>
 </p>
 
 ## Overview
 
-mcBase64x32 is a custom encoding scheme designed specifically for storing data efficiently in Minecraft books. It uses a 64x32-2-character alphabet using Unicode characters of pixel width of 1 and 2 and by combining these characters we achieve optimal compression while keeping the Minecraft book limits of characters and pixels.
+Bookette encodes bytes as Unicode text for Minecraft books, using ordered one-width and two-width glyph vocabularies.
 
-We basically use a bunch of 1 and 2 pixel width Unicode characters to build 2048 unique pairs of them that then we use to encode and decode data.
+The encoding uses one 8-scalar header containing the byte length of the whole payload. Payload data follows in 63-bit big-endian blocks. For multi-page text, concatenate pages in order and decode the result once. The maximum bytes per page has not been measured.
 
 ## Features
 
-- **High Performance**: Implemented in Rust for ultra-fast encoding/decoding
-- **Minecraft Optimized**: Designed specifically for maximum data storage in Minecraft books
-- **Zero Dependencies**: No external Python dependencies required
+- Encoding and decoding use a Rust extension.
+- Multi-page payloads decode after page text is concatenated in order.
+- The Python package has no runtime dependencies.
 
 ## Installation
 
-### Using [uv](https://docs.astral.sh/uv/getting-started/installation/) (Recommended)
+### Using [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended)
 
 ```bash
-uv add mcbase64x32
+uv add bookette
 ```
 
 ### Using pip
 
 ```bash
-pip install mcbase64x32
+pip install bookette
 ```
 
-### From Source
+### From source
 
 ```bash
-git clone https://github.com/victordlp8/mcBase64x32.git
-cd mcBase64x32
+git clone https://github.com/victordlp8/bookette.git
+cd bookette
 uv sync
 uv tool install -e .
 ```
 
-## Quick Start
+## Quick start
 
 ```python
-import mcbase64x32
+import bookette
 
 
 # Encode data
 data = b"Hello, Minecraft World!"
-encoded = mcbase64x32.encode(data)
+encoded = bookette.encode(data)
 print(f"Encoded: {encoded}")
 
 # Decode data
-decoded = mcbase64x32.decode(encoded)
+decoded = bookette.decode(encoded)
 print(f"Decoded: {decoded.decode()}")
 
-# Check compression ratio
-original_size = len(data)
-encoded_size = len(encoded)
-compression_ratio = original_size / encoded_size
-print(f"Compression ratio: {compression_ratio:.2f}x")
+# Encoded text is Unicode; len() counts its scalar values.
+print(f"Encoded scalars: {len(encoded)}")
 ```
 
-## API Reference
+## API reference
 
 ### Functions
 
 #### `encode(payload: bytes) -> str`
 
-Encodes binary data into mcBase64x32 format.
+Encodes bytes as Unicode text, preceded by one whole-payload length header.
 
-**Parameters:**
-- `payload` (bytes): The binary data to encode
+#### `decode(text_in_bookette: str) -> bytes`
 
-**Returns:**
-- `str`: The encoded string in mcBase64x32 format
+Decodes concatenated text into the original bytes. Malformed text raises `ValueError`.
 
-#### `decode(text_in_mcbase64x32: str) -> bytes`
+### Format
 
-Decodes mcBase64x32 string back to binary data.
+The format uses one 8-scalar length header for the whole payload, followed by 63-bit big-endian blocks. Concatenate page fragments in order before calling `decode`. The verified per-page maximum has not yet been measured.
 
-**Parameters:**
-- `text_in_mcbase64x32` (str): The encoded string to decode
+## How it works
 
-**Returns:**
-- `bytes`: The decoded binary data
-
-**Raises:**
-- `ValueError`: If the encoded string contains invalid characters
-
-### Constants
-
-#### `MAX_BYTES_PER_PAGE`
-
-The maximum number of bytes that can be stored per Minecraft book page (694 bytes).
-
-## How It Works
-
-mcBase64x32 uses a custom encoding scheme that:
-
-1. **Converts data to 11-bit chunks**: Each chunk represents a value from 0-2047
-2. **Maps to Unicode characters**: Uses a custom built 64x32-2-character alphabet made of pairs of Unicode characters
-3. **Optimizes for Minecraft**: Designed specifically for maximum data storage in Minecraft books
-4. **Includes dynamic length header**: up to 32-bit length prefix ensures proper decoding
-5. **Rust-powered**: Compiled Rust extension for maximum performance
+Each full 63-bit block maps to eight Unicode scalars. The final partial block is left-aligned and zero-padded; the decoder rejects nonzero padding.
 
 ## Performance
 
-The implementation is optimized for speed using:
-
-- **Rust compilation**: Native compiled code for maximum performance
-- **Pre-computed lookup tables**: Character mappings are pre-calculated at compile time
-- **Bit manipulation**: Efficient binary operations for encoding/decoding
-- **Memory optimization**: Minimal memory allocations during processing
+Encoding and decoding run in the Rust extension.
 
 ## Testing
 
@@ -138,31 +108,32 @@ uv run pytest
 pytest
 
 # With coverage
-uv run pytest --cov=mcbase64x32
+uv run pytest --cov=bookette
 ```
 
 ## Requirements
 
 - Python >= 3.13
-- No external dependencies required
+- No Python runtime dependencies
+- A Rust toolchain is required to build from source
 
 ## Development
 
-### Setup Development Environment
+### Set up the development environment
 
 ```bash
-git clone https://github.com/victordlp8/mcBase64x32.git
-cd mcBase64x32
+git clone https://github.com/victordlp8/bookette.git
+cd bookette
 uv sync
 ```
 
-### Running Tests
+### Run tests
 
 ```bash
 uv run pytest
 ```
 
-### Building Package
+### Build the package
 
 ```bash
 uv build
