@@ -163,34 +163,89 @@ fn char_lut_read(c: char) -> u16 {
     }
 }
 
+#[inline(always)]
+fn decompose<const S2: u64, const S3: u64, const S4: u64>(
+    mut rem: u64,
+) -> (usize, usize, usize, usize) {
+    let i4 = (rem % S4) as usize;
+    rem /= S4;
+    let i3 = (rem % S3) as usize;
+    rem /= S3;
+    let i2 = (rem % S2) as usize;
+    rem /= S2;
+    (rem as usize, i2, i3, i4)
+}
+
 #[inline]
 pub fn encode_u32(val: u32) -> [char; 4] {
     let v = val as u64;
     let bucket_id = OFFSETS.partition_point(|&off| off <= v) - 1;
-    let b = &BUCKET_TABLE[bucket_id];
-    let mut rem = v - b.offset;
-
-    let i4 = (rem % b.radices[2]) as usize;
-    rem /= b.radices[2];
-    let i3 = (rem % b.radices[1]) as usize;
-    rem /= b.radices[1];
-    let i2 = (rem % b.radices[0]) as usize;
-    let i1 = (rem / b.radices[0]) as usize;
-
     let a1 = &*CHARS_A1;
     let a2 = &*CHARS_A2;
     let a3 = &*CHARS_A3;
-    let glyph = |w: u8, idx: usize| match w {
-        1 => a1[idx],
-        2 => a2[idx],
-        _ => a3[idx],
-    };
-    [
-        glyph(b.widths[0], i1),
-        glyph(b.widths[1], i2),
-        glyph(b.widths[2], i3),
-        glyph(b.widths[3], i4),
-    ]
+
+    match bucket_id {
+        0 => {
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N1_U64>(v - OFFSETS[0]);
+            [a1[i1], a1[i2], a1[i3], a1[i4]]
+        }
+        1 => {
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N1_U64>(v - OFFSETS[1]);
+            [a2[i1], a1[i2], a1[i3], a1[i4]]
+        }
+        2 => {
+            let (i1, i2, i3, i4) = decompose::<N2_U64, N1_U64, N1_U64>(v - OFFSETS[2]);
+            [a1[i1], a2[i2], a1[i3], a1[i4]]
+        }
+        3 => {
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N2_U64, N1_U64>(v - OFFSETS[3]);
+            [a1[i1], a1[i2], a2[i3], a1[i4]]
+        }
+        4 => {
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N2_U64>(v - OFFSETS[4]);
+            [a1[i1], a1[i2], a1[i3], a2[i4]]
+        }
+        5 => {
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N1_U64>(v - OFFSETS[5]);
+            [a3[i1], a1[i2], a1[i3], a1[i4]]
+        }
+        6 => {
+            let (i1, i2, i3, i4) = decompose::<N3_U64, N1_U64, N1_U64>(v - OFFSETS[6]);
+            [a1[i1], a3[i2], a1[i3], a1[i4]]
+        }
+        7 => {
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N3_U64, N1_U64>(v - OFFSETS[7]);
+            [a1[i1], a1[i2], a3[i3], a1[i4]]
+        }
+        8 => {
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N3_U64>(v - OFFSETS[8]);
+            [a1[i1], a1[i2], a1[i3], a3[i4]]
+        }
+        9 => {
+            let (i1, i2, i3, i4) = decompose::<N2_U64, N1_U64, N1_U64>(v - OFFSETS[9]);
+            [a2[i1], a2[i2], a1[i3], a1[i4]]
+        }
+        10 => {
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N2_U64, N1_U64>(v - OFFSETS[10]);
+            [a2[i1], a1[i2], a2[i3], a1[i4]]
+        }
+        11 => {
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N2_U64>(v - OFFSETS[11]);
+            [a2[i1], a1[i2], a1[i3], a2[i4]]
+        }
+        12 => {
+            let (i1, i2, i3, i4) = decompose::<N2_U64, N2_U64, N1_U64>(v - OFFSETS[12]);
+            [a1[i1], a2[i2], a2[i3], a1[i4]]
+        }
+        13 => {
+            let (i1, i2, i3, i4) = decompose::<N2_U64, N1_U64, N2_U64>(v - OFFSETS[13]);
+            [a1[i1], a2[i2], a1[i3], a2[i4]]
+        }
+        _ => {
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N2_U64, N2_U64>(v - OFFSETS[14]);
+            [a1[i1], a1[i2], a2[i3], a2[i4]]
+        }
+    }
 }
 
 #[inline]
@@ -351,6 +406,35 @@ fn skip_quartets(char_iter: &mut impl Iterator<Item = char>, quartets: usize) {
     }
 }
 
+/// Decode the body of a single 1,024-character page (excluding Quartet 0 on Page 1).
+///
+/// Calculates page quotas, decodes required data quartets into `output`, skips padding
+/// quartets, truncates trailing bytes from the final quartet, and returns bytes decoded.
+#[inline]
+fn decode_page_body_into(
+    char_iter: &mut impl Iterator<Item = char>,
+    is_page_one: bool,
+    remaining_bytes: usize,
+    output: &mut Vec<u8>,
+) -> PyResult<usize> {
+    let (max_bytes, total_data_quartets) = if is_page_one {
+        (BYTES_PAGE_1, DATA_QUARTETS_PAGE_1)
+    } else {
+        (BYTES_SUBSEQUENT, DATA_QUARTETS_SUBSEQUENT)
+    };
+
+    let bytes_needed = remaining_bytes.min(max_bytes);
+    let q_needed = bytes_needed.div_ceil(4);
+    let pad_quartets = total_data_quartets - q_needed;
+
+    let start_len = output.len();
+    decode_quartets_into(char_iter, q_needed, output)?;
+    skip_quartets(char_iter, pad_quartets);
+    output.truncate(start_len + bytes_needed);
+
+    Ok(bytes_needed)
+}
+
 #[pyfunction]
 pub fn decode_rust(input: &str) -> PyResult<Vec<u8>> {
     let char_count = input.chars().count();
@@ -386,25 +470,23 @@ pub fn decode_rust(input: &str) -> PyResult<Vec<u8>> {
     // If formatted as pages (multiples of 1024 chars):
     if char_count >= CHARS_PER_PAGE && char_count % CHARS_PER_PAGE == 0 {
         let total_pages = char_count / CHARS_PER_PAGE;
+        let mut remaining = len;
         let mut data_quartets_read = 0;
 
         // Page 1
-        let p1_needed = total_data_quartets.min(DATA_QUARTETS_PAGE_1);
-        decode_quartets_into(&mut char_iter, p1_needed, &mut output)?;
-        data_quartets_read += p1_needed;
-        skip_quartets(&mut char_iter, DATA_QUARTETS_PAGE_1 - p1_needed);
+        let p1_bytes = decode_page_body_into(&mut char_iter, true, remaining, &mut output)?;
+        data_quartets_read += p1_bytes.div_ceil(4);
+        remaining -= p1_bytes;
 
         // Subsequent pages
         for _p in 1..total_pages {
-            if data_quartets_read >= total_data_quartets {
+            if remaining == 0 {
                 break;
             }
-            let p_needed = (total_data_quartets - data_quartets_read).min(DATA_QUARTETS_SUBSEQUENT);
-            decode_quartets_into(&mut char_iter, p_needed, &mut output)?;
-            data_quartets_read += p_needed;
-            skip_quartets(&mut char_iter, DATA_QUARTETS_SUBSEQUENT - p_needed);
+            let p_bytes = decode_page_body_into(&mut char_iter, false, remaining, &mut output)?;
+            data_quartets_read += p_bytes.div_ceil(4);
+            remaining -= p_bytes;
         }
-
         if data_quartets_read < total_data_quartets {
             return Err(PyValueError::new_err(format!(
                 "Payload requires {total_data_quartets} quartets, but only {data_quartets_read} read across pages"
@@ -604,7 +686,7 @@ impl PageDecoder {
 
         let mut char_iter = page_str.chars();
 
-        let (bytes_needed, pad_quartets) = if self.page_index == 0 {
+        if self.page_index == 0 {
             let c0 = char_iter.next().unwrap();
             let c1 = char_iter.next().unwrap();
             let c2 = char_iter.next().unwrap();
@@ -617,22 +699,22 @@ impl PageDecoder {
                 return Ok(None);
             }
             self.remaining = total_len;
-            let needed = total_len.min(BYTES_PAGE_1);
-            let q_needed = needed.div_ceil(4);
-            (needed, DATA_QUARTETS_PAGE_1 - q_needed)
+        }
+
+        let max_page_bytes = if self.page_index == 0 {
+            BYTES_PAGE_1
         } else {
-            let needed = self.remaining.min(BYTES_SUBSEQUENT);
-            let q_needed = needed.div_ceil(4);
-            (needed, DATA_QUARTETS_SUBSEQUENT - q_needed)
+            BYTES_SUBSEQUENT
         };
+        let mut buf: Vec<u8> = Vec::with_capacity(self.remaining.min(max_page_bytes));
+        let bytes_decoded = decode_page_body_into(
+            &mut char_iter,
+            self.page_index == 0,
+            self.remaining,
+            &mut buf,
+        )?;
 
-        let q_needed = bytes_needed.div_ceil(4);
-        let mut buf: Vec<u8> = Vec::with_capacity(q_needed * 4);
-        decode_quartets_into(&mut char_iter, q_needed, &mut buf)?;
-        skip_quartets(&mut char_iter, pad_quartets);
-        buf.truncate(bytes_needed);
-
-        self.remaining -= bytes_needed;
+        self.remaining -= bytes_decoded;
         self.page_index += 1;
         if self.remaining == 0 {
             self.done = true;
