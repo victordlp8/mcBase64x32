@@ -194,14 +194,13 @@ def benchmark_oneshot(
     t_dec_end = time.perf_counter_ns()
     dec_duration = (t_dec_end - t_dec_start) / (1e9 * iterations)
 
-    # Verification
-    verified = False
+    # Verification: None when disabled, True/False when evaluated
+    verified: Optional[bool] = None
     if verify:
         if tier.size_bytes >= 10 * 1024 * 1024:
             verified = (hashlib.sha256(decoded).digest() == hashlib.sha256(payload).digest())
         else:
             verified = (decoded == payload)
-
     size_mb = tier.size_bytes / (1024 * 1024)
     enc_speed = (size_mb / enc_duration) if enc_duration > 0 else 0.0
     dec_speed = (size_mb / dec_duration) if dec_duration > 0 else 0.0
@@ -248,7 +247,7 @@ def benchmark_streaming(
     # Only pre-encode into a list to measure pure decode if size <= 10 MB.
     # For sizes > 10 MB, streaming decode is skipped to avoid retaining millions
     # of page strings in RAM or mislabeling pipeline time as pure decode time.
-    verified: Optional[bool] = False
+    verified: Optional[bool] = None
     dec_duration: Optional[float] = None
     dec_speed: Optional[float] = None
 
@@ -264,6 +263,8 @@ def benchmark_streaming(
                     hasher.update(chunk)
             if hasher and hasher.digest() == expected_hash:
                 verified = True
+            elif hasher:
+                verified = False
         t_dec_end = time.perf_counter_ns()
         dec_duration = (t_dec_end - t_dec_start) / (1e9 * iterations)
         del pages
@@ -273,7 +274,6 @@ def benchmark_streaming(
         dec_duration = None
         dec_speed = None
         verified = None
-
     size_mb = tier.size_bytes / (1024 * 1024)
     enc_speed = (size_mb / enc_duration) if enc_duration > 0 else 0.0
     return BenchRunResult(
@@ -328,6 +328,7 @@ def stage_disk_fixture(
 
     expected_hash = hashlib.sha256(payload).hexdigest() if verify else None
 
+    success = False
     try:
         print(f"  -> Disk Decode: Generating disk fixture ({tier.name})...", flush=True)
         t_gen_start = time.perf_counter_ns()
@@ -351,15 +352,14 @@ def stage_disk_fixture(
             flush=True,
         )
 
+        success = True
         return fixture_file, expected_hash, gen_duration, enc_speed, total_chars
-    except (OSError, Exception):
-        if os.path.exists(fixture_file):
+    finally:
+        if not success and os.path.exists(fixture_file):
             try:
                 os.remove(fixture_file)
             except OSError:
                 pass
-        raise
-
 def measure_disk_decode(
     fixture_file: str,
     tier: TierSpec,
@@ -603,60 +603,76 @@ def main() -> int:
     for tier in selected_tiers:
         print(f"Running [{tier.category.upper()}] {tier.name} (pattern={args.pattern})...", flush=True)
 
-        payload = generate_payload(tier.size_bytes, args.pattern)
+        # Determine runnable modes for this tier before allocating payload
+        can_run_oneshot = args.mode in ("oneshot", "both", "all")
+        oneshot_skipped = can_run_oneshot and (tier.size_bytes >= 1024 * 1024 * 1024 and not args.allow_large_oneshot)
+        run_oneshot = can_run_oneshot and not oneshot_skipped
 
-        # Run oneshot
-        if args.mode in ("oneshot", "both"):
-            if tier.size_bytes >= 1024 * 1024 * 1024 and not args.allow_large_oneshot:
-                print(
-                    f"  -> Oneshot:   Skipped for {tier.name} (>= 1 GiB in oneshot requires "
-                    f"contiguous multi-GB CPython string; pass --allow-large-oneshot to force)."
-                )
-            else:
-                try:
-                    res_oneshot = benchmark_oneshot(
-                        payload, tier, args.pattern, tier.default_iterations, args.verify
-                    )
-                    results.append(res_oneshot)
-                    print(
-                        f"  -> Oneshot:   Encode {res_oneshot.encode_speed_mb_s:7.2f} MB/s | "
-                        f"Decode {res_oneshot.decode_speed_mb_s:7.2f} MB/s | Verified={res_oneshot.verified}"
-                    )
-                except MemoryError:
-                    print(f"  -> Oneshot:   FAILED with MemoryError (Out of Memory)!")
+        can_run_streaming = args.mode in ("streaming", "both", "all")
+        streaming_skipped = can_run_streaming and (tier.size_bytes > 50 * 1024 * 1024 and not ({"1gb", "4gb"} & tier_requests))
+        run_streaming = can_run_streaming and not streaming_skipped
 
-        # Run streaming
-        # For streaming, skip streaming on huge sizes (> 100 MB) unless explicitly requested,
-        # because pure Python page generator would take several minutes for 1 GB.
-        if args.mode in ("streaming", "both"):
-            if tier.size_bytes > 50 * 1024 * 1024 and not ({"1gb", "4gb"} & tier_requests):
-                print(f"  -> Streaming: Skipped for {tier.name} (> 50 MB, pure Python generator).")
-            else:
-                try:
-                    res_streaming = benchmark_streaming(
-                        payload, tier, args.pattern, 1, args.verify
-                    )
-                    results.append(res_streaming)
-                    dec_str = (
-                        f"{res_streaming.decode_speed_mb_s:7.2f} MB/s"
-                        if res_streaming.decode_speed_mb_s is not None
-                        else "    N/A"
-                    )
-                    v_str = (
-                        str(res_streaming.verified)
-                        if res_streaming.verified is not None
-                        else "N/A"
-                    )
-                    print(
-                        f"  -> Streaming: Encode {res_streaming.encode_speed_mb_s:7.2f} MB/s | "
-                        f"Decode {dec_str} | Verified={v_str}"
-                    )
-                except MemoryError:
-                    print(f"  -> Streaming: FAILED with MemoryError (Out of Memory)!")
-        # Run disk-backed decode
         run_disk = args.mode in ("disk", "all") or (
             args.disk_fixture and tier.size_bytes > 10 * 1024 * 1024 and args.mode in ("streaming", "both")
         )
+
+        if not (run_oneshot or run_streaming or run_disk):
+            if oneshot_skipped:
+                print(
+                    f"  -> Oneshot:   Skipped for {tier.name} (>= 1 GiB requires --allow-large-oneshot; "
+                    f"use --mode disk for O(1) RAM streaming)."
+                )
+            if streaming_skipped:
+                print(f"  -> Streaming: Skipped for {tier.name} (> 50 MB, pure Python generator).")
+            continue
+
+        if oneshot_skipped:
+            print(
+                f"  -> Oneshot:   Skipped for {tier.name} (>= 1 GiB requires --allow-large-oneshot; "
+                f"use --mode disk for O(1) RAM streaming)."
+            )
+        if streaming_skipped:
+            print(f"  -> Streaming: Skipped for {tier.name} (> 50 MB, pure Python generator).")
+
+        payload = generate_payload(tier.size_bytes, args.pattern)
+
+        # Run oneshot
+        if run_oneshot:
+            try:
+                res_oneshot = benchmark_oneshot(
+                    payload, tier, args.pattern, tier.default_iterations, args.verify
+                )
+                results.append(res_oneshot)
+                print(
+                    f"  -> Oneshot:   Encode {res_oneshot.encode_speed_mb_s:7.2f} MB/s | "
+                    f"Decode {res_oneshot.decode_speed_mb_s:7.2f} MB/s | Verified={res_oneshot.verified}"
+                )
+            except MemoryError:
+                print(f"  -> Oneshot:   FAILED with MemoryError (Out of Memory)!")
+
+        # Run streaming
+        if run_streaming:
+            try:
+                res_streaming = benchmark_streaming(
+                    payload, tier, args.pattern, 1, args.verify
+                )
+                results.append(res_streaming)
+                dec_str = (
+                    f"{res_streaming.decode_speed_mb_s:7.2f} MB/s"
+                    if res_streaming.decode_speed_mb_s is not None
+                    else "    N/A"
+                )
+                v_str = (
+                    str(res_streaming.verified)
+                    if res_streaming.verified is not None
+                    else "N/A"
+                )
+                print(
+                    f"  -> Streaming: Encode {res_streaming.encode_speed_mb_s:7.2f} MB/s | "
+                    f"Decode {dec_str} | Verified={v_str}"
+                )
+            except MemoryError:
+                print(f"  -> Streaming: FAILED with MemoryError (Out of Memory)!")
         disk_stage = None
         if run_disk:
             try:
