@@ -134,10 +134,19 @@ def plot_results(
     output_path: str = "benchmark_throughput.png",
 ) -> None:
     """Generate dark-mode publication-quality plot using matplotlib."""
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print(
+            f"\n⚠️  matplotlib is not installed in the current environment.\n"
+            f"   Table results were printed above. To generate the chart graphic, run:\n"
+            f"     uv run --with matplotlib python scripts/plot_benchmark.py\n"
+            f"   or install it via:\n"
+            f"     pip install matplotlib\n"
+        )
+        return
     sizes_bytes = data["sizes_bytes"]
     sizes_kb = [s / 1024.0 for s in sizes_bytes]
 
