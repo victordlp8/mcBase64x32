@@ -328,30 +328,37 @@ def stage_disk_fixture(
 
     expected_hash = hashlib.sha256(payload).hexdigest() if verify else None
 
-    print(f"  -> Disk Decode: Generating disk fixture ({tier.name})...", flush=True)
-    t_gen_start = time.perf_counter_ns()
-    page_count = 0
-    total_chars = 0
-    with open(fixture_file, "w", encoding="utf-8") as f:
-        for page in bookette.encode_pages(payload):
-            f.write(page + "\n")
-            page_count += 1
-            total_chars += len(page)
-    t_gen_end = time.perf_counter_ns()
-    gen_duration = (t_gen_end - t_gen_start) / 1e9
-    actual_file_size = os.path.getsize(fixture_file)
+    try:
+        print(f"  -> Disk Decode: Generating disk fixture ({tier.name})...", flush=True)
+        t_gen_start = time.perf_counter_ns()
+        page_count = 0
+        total_chars = 0
+        with open(fixture_file, "w", encoding="utf-8") as f:
+            for page in bookette.encode_pages(payload):
+                f.write(page + "\n")
+                page_count += 1
+                total_chars += len(page)
+        t_gen_end = time.perf_counter_ns()
+        gen_duration = (t_gen_end - t_gen_start) / 1e9
+        actual_file_size = os.path.getsize(fixture_file)
 
-    size_mb = tier.size_bytes / (1024 * 1024)
-    enc_speed = (size_mb / gen_duration) if gen_duration > 0 else 0.0
+        size_mb = tier.size_bytes / (1024 * 1024)
+        enc_speed = (size_mb / gen_duration) if gen_duration > 0 else 0.0
 
-    print(
-        f"     Fixture: {actual_file_size / (1024*1024):.2f} MB ({page_count} pages) "
-        f"written in {gen_duration:.2f}s ({enc_speed:.2f} MB/s)",
-        flush=True,
-    )
+        print(
+            f"     Fixture: {actual_file_size / (1024*1024):.2f} MB ({page_count} pages) "
+            f"written in {gen_duration:.2f}s ({enc_speed:.2f} MB/s)",
+            flush=True,
+        )
 
-    return fixture_file, expected_hash, gen_duration, enc_speed, total_chars
-
+        return fixture_file, expected_hash, gen_duration, enc_speed, total_chars
+    except (OSError, Exception):
+        if os.path.exists(fixture_file):
+            try:
+                os.remove(fixture_file)
+            except OSError:
+                pass
+        raise
 
 def measure_disk_decode(
     fixture_file: str,
@@ -388,7 +395,7 @@ def measure_disk_decode(
 
         verified: Optional[bool] = False
         if hasher and expected_hash:
-            verified = (hasher.hexdigest() == expected_hash)
+            verified = (hasher.hexdigest() == expected_hash and decoded_bytes == tier.size_bytes)
         elif not verify:
             verified = None
 
@@ -659,8 +666,8 @@ def main() -> int:
                     args.verify,
                     fixture_dir=args.fixture_dir,
                 )
-            except MemoryError:
-                print(f"  -> Disk Decode: FAILED with MemoryError (Out of Memory during staging)!")
+            except (MemoryError, OSError) as exc:
+                print(f"  -> Disk Decode: FAILED ({type(exc).__name__}: {exc}) during staging!")
 
         # Explicit free and GC before decode pass guarantees O(1) memory
         del payload
@@ -685,8 +692,8 @@ def main() -> int:
                     f"  -> Disk Stream: Encode {res_disk.encode_speed_mb_s:7.2f} MB/s | "
                     f"Decode {res_disk.decode_speed_mb_s:7.2f} MB/s | Verified={res_disk.verified}"
                 )
-            except MemoryError:
-                print(f"  -> Disk Stream: FAILED with MemoryError (Out of Memory during decode)!")
+            except (MemoryError, OSError) as exc:
+                print(f"  -> Disk Stream: FAILED ({type(exc).__name__}: {exc}) during decode!")
 
     print_results_table(results)
 
