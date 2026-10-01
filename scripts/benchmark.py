@@ -291,6 +291,128 @@ def benchmark_streaming(
         verified=verified,
     )
 
+def stage_disk_fixture(
+    payload: bytes,
+    tier: TierSpec,
+    verify: bool,
+    fixture_dir: Optional[str] = None,
+) -> Optional[Tuple[str, Optional[str], float, float, int]]:
+    """Write encoded pages to a disk fixture with O(1) memory and return metadata."""
+    import os
+    import shutil
+    import tempfile
+
+    target_dir = fixture_dir or ".scratch"
+    os.makedirs(target_dir, exist_ok=True)
+
+    estimated_bytes = int(tier.size_bytes * 2.8)
+    try:
+        _, _, free_bytes = shutil.disk_usage(target_dir)
+        if free_bytes < estimated_bytes * 1.2:
+            print(
+                f"  -> Disk Decode: Skipped for {tier.name} (insufficient disk space: "
+                f"needs ~{estimated_bytes / (1024**3):.2f} GB, free: {free_bytes / (1024**3):.2f} GB)."
+            )
+            return None
+    except Exception as exc:
+        print(f"  -> Disk Decode: Skipped for {tier.name} (could not verify disk space: {exc}).")
+        return None
+
+    with tempfile.NamedTemporaryFile(
+        dir=target_dir,
+        prefix=f"bench_fixture_{tier.category}_{tier.size_bytes}_",
+        suffix=".txt",
+        delete=False,
+    ) as tmp_f:
+        fixture_file = tmp_f.name
+
+    expected_hash = hashlib.sha256(payload).hexdigest() if verify else None
+
+    print(f"  -> Disk Decode: Generating disk fixture ({tier.name})...", flush=True)
+    t_gen_start = time.perf_counter_ns()
+    page_count = 0
+    total_chars = 0
+    with open(fixture_file, "w", encoding="utf-8") as f:
+        for page in bookette.encode_pages(payload):
+            f.write(page + "\n")
+            page_count += 1
+            total_chars += len(page)
+    t_gen_end = time.perf_counter_ns()
+    gen_duration = (t_gen_end - t_gen_start) / 1e9
+    actual_file_size = os.path.getsize(fixture_file)
+
+    size_mb = tier.size_bytes / (1024 * 1024)
+    enc_speed = (size_mb / gen_duration) if gen_duration > 0 else 0.0
+
+    print(
+        f"     Fixture: {actual_file_size / (1024*1024):.2f} MB ({page_count} pages) "
+        f"written in {gen_duration:.2f}s ({enc_speed:.2f} MB/s)",
+        flush=True,
+    )
+
+    return fixture_file, expected_hash, gen_duration, enc_speed, total_chars
+
+
+def measure_disk_decode(
+    fixture_file: str,
+    tier: TierSpec,
+    pattern: str,
+    expected_hash: Optional[str],
+    gen_duration: float,
+    enc_speed: float,
+    total_chars: int,
+    verify: bool,
+    keep_fixture: bool = False,
+) -> BenchRunResult:
+    """Perform timed disk-backed decode pass with O(1) memory and verify SHA-256."""
+    import os
+
+    try:
+        def read_pages(path: str) -> Iterator[str]:
+            with open(path, "r", encoding="utf-8") as pf:
+                for line in pf:
+                    yield line.rstrip("\r\n")
+
+        print(f"  -> Disk Decode: Running timed decode pass with incremental hash...", flush=True)
+        t_dec_start = time.perf_counter_ns()
+        hasher = hashlib.sha256() if verify else None
+        decoded_bytes = 0
+        for chunk in bookette.decode_pages(read_pages(fixture_file)):
+            decoded_bytes += len(chunk)
+            if hasher:
+                hasher.update(chunk)
+        t_dec_end = time.perf_counter_ns()
+        dec_duration = (t_dec_end - t_dec_start) / 1e9
+        size_mb = tier.size_bytes / (1024 * 1024)
+        dec_speed = (size_mb / dec_duration) if dec_duration > 0 else 0.0
+
+        verified: Optional[bool] = False
+        if hasher and expected_hash:
+            verified = (hasher.hexdigest() == expected_hash)
+        elif not verify:
+            verified = None
+
+        return BenchRunResult(
+            category=tier.category,
+            tier_name=tier.name,
+            size_bytes=tier.size_bytes,
+            pattern=pattern,
+            mode="disk-stream (Python)",
+            iterations=1,
+            encode_time_sec=gen_duration,
+            encode_speed_mb_s=enc_speed,
+            decode_time_sec=dec_duration,
+            decode_speed_mb_s=dec_speed,
+            encoded_chars=total_chars,
+            verified=verified,
+        )
+    finally:
+        if not keep_fixture:
+            try:
+                if os.path.exists(fixture_file):
+                    os.remove(fixture_file)
+            except OSError:
+                pass
 
 # --- Table & Report Formatting ---
 
@@ -383,9 +505,24 @@ def main() -> int:
     )
     parser.add_argument(
         "--mode",
-        choices=["oneshot", "streaming", "both"],
+        choices=["oneshot", "streaming", "disk", "both", "all"],
         default="oneshot",
-        help="Benchmark mode: 'oneshot' (Rust encode/decode), 'streaming' (encode_pages/decode_pages), or 'both'.",
+        help="Benchmark mode: 'oneshot' (Rust engine), 'streaming' (generator), 'disk' (disk-backed page fixture), 'both' (oneshot+streaming), or 'all'.",
+    )
+    parser.add_argument(
+        "--disk-fixture",
+        action="store_true",
+        help="Automatically use a disk-backed page fixture for tiers > 10 MB in streaming mode to benchmark independent decode.",
+    )
+    parser.add_argument(
+        "--fixture-dir",
+        default=".scratch",
+        help="Directory to store temporary disk fixture files (default: .scratch).",
+    )
+    parser.add_argument(
+        "--keep-fixtures",
+        action="store_true",
+        help="Retain temporary fixture files on disk instead of deleting them after benchmark.",
     )
     parser.add_argument(
         "--allow-large-oneshot",
@@ -509,10 +646,47 @@ def main() -> int:
                     )
                 except MemoryError:
                     print(f"  -> Streaming: FAILED with MemoryError (Out of Memory)!")
+        # Run disk-backed decode
+        run_disk = args.mode in ("disk", "all") or (
+            args.disk_fixture and tier.size_bytes > 10 * 1024 * 1024 and args.mode in ("streaming", "both")
+        )
+        disk_stage = None
+        if run_disk:
+            try:
+                disk_stage = stage_disk_fixture(
+                    payload,
+                    tier,
+                    args.verify,
+                    fixture_dir=args.fixture_dir,
+                )
+            except MemoryError:
+                print(f"  -> Disk Decode: FAILED with MemoryError (Out of Memory during staging)!")
 
-        # Explicit free and GC
+        # Explicit free and GC before decode pass guarantees O(1) memory
         del payload
         gc.collect()
+
+        if disk_stage is not None:
+            fixture_file, exp_hash, gen_dur, enc_spd, tot_chars = disk_stage
+            try:
+                res_disk = measure_disk_decode(
+                    fixture_file=fixture_file,
+                    tier=tier,
+                    pattern=args.pattern,
+                    expected_hash=exp_hash,
+                    gen_duration=gen_dur,
+                    enc_speed=enc_spd,
+                    total_chars=tot_chars,
+                    verify=args.verify,
+                    keep_fixture=args.keep_fixtures,
+                )
+                results.append(res_disk)
+                print(
+                    f"  -> Disk Stream: Encode {res_disk.encode_speed_mb_s:7.2f} MB/s | "
+                    f"Decode {res_disk.decode_speed_mb_s:7.2f} MB/s | Verified={res_disk.verified}"
+                )
+            except MemoryError:
+                print(f"  -> Disk Stream: FAILED with MemoryError (Out of Memory during decode)!")
 
     print_results_table(results)
 
