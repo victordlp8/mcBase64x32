@@ -17,31 +17,6 @@ const N1_U64: u64 = N1 as u64;
 const N2_U64: u64 = N2 as u64;
 const N3_U64: u64 = N3 as u64;
 
-// Capacities of the 4 structural bucket shapes:
-const CAP_1111: u64 = N1_U64 * N1_U64 * N1_U64 * N1_U64; // 126_247_696
-const CAP_2111: u64 = N2_U64 * N1_U64 * N1_U64 * N1_U64; // 251_304_376
-const CAP_3111: u64 = N3_U64 * N1_U64 * N1_U64 * N1_U64; // 45_258_608
-const CAP_2211: u64 = N2_U64 * N2_U64 * N1_U64 * N1_U64; // 500_237_956
-
-// Offsets derived continuously from bucket capacities:
-const OFF_0: u64 = 0;
-const OFF_1: u64 = OFF_0 + CAP_1111;
-const OFF_2: u64 = OFF_1 + CAP_2111;
-const OFF_3: u64 = OFF_2 + CAP_2111;
-const OFF_4: u64 = OFF_3 + CAP_2111;
-const OFF_5: u64 = OFF_4 + CAP_2111;
-const OFF_6: u64 = OFF_5 + CAP_3111;
-const OFF_7: u64 = OFF_6 + CAP_3111;
-const OFF_8: u64 = OFF_7 + CAP_3111;
-const OFF_9: u64 = OFF_8 + CAP_3111;
-const OFF_10: u64 = OFF_9 + CAP_2211;
-const OFF_11: u64 = OFF_10 + CAP_2211;
-const OFF_12: u64 = OFF_11 + CAP_2211;
-const OFF_13: u64 = OFF_12 + CAP_2211;
-const OFF_14: u64 = OFF_13 + CAP_2211;
-
-pub const BUCKET_14_CUTOFF: u64 = 481_277_884;
-
 pub const MAX_BYTES_PER_PAGE: usize = 1024;
 const QUARTETS_PER_PAGE: usize = 256;
 const CHARS_PER_PAGE: usize = QUARTETS_PER_PAGE * 4; // 1024 characters per page
@@ -50,122 +25,77 @@ const DATA_QUARTETS_SUBSEQUENT: usize = 256; // 1024 bytes of payload on Pages 2
 const BYTES_PAGE_1: usize = DATA_QUARTETS_PAGE_1 * 4; // 1020 payload bytes on Page 1
 const BYTES_SUBSEQUENT: usize = DATA_QUARTETS_SUBSEQUENT * 4; // 1024 payload bytes on Pages 2..N
 
-#[derive(Clone, Copy)]
-pub struct BucketDef {
-    pub id: u8,
-    pub widths: [u8; 4],
-    pub sizes: [u64; 4],
-    pub capacity: u64,
-    pub offset: u64,
+/// The 15 normative K4-W6 bucket glyph widths in ascending capacity order.
+pub const BUCKET_WIDTHS: [[u8; 4]; 15] = [
+    [1, 1, 1, 1], // 0
+    [2, 1, 1, 1],
+    [1, 2, 1, 1],
+    [1, 1, 2, 1],
+    [1, 1, 1, 2], // 1..4
+    [3, 1, 1, 1],
+    [1, 3, 1, 1],
+    [1, 1, 3, 1],
+    [1, 1, 1, 3], // 5..8
+    [2, 2, 1, 1],
+    [2, 1, 2, 1],
+    [2, 1, 1, 2], // 9..11
+    [1, 2, 2, 1],
+    [1, 2, 1, 2],
+    [1, 1, 2, 2], // 12..14
+];
+
+const fn width_to_radix(w: u8) -> u64 {
+    match w {
+        1 => N1_U64,
+        2 => N2_U64,
+        _ => N3_U64,
+    }
 }
 
-pub const BUCKETS: [BucketDef; 15] = [
-    BucketDef {
-        id: 0,
-        widths: [1, 1, 1, 1],
-        sizes: [N1_U64, N1_U64, N1_U64, N1_U64],
-        capacity: CAP_1111,
-        offset: OFF_0,
-    },
-    BucketDef {
-        id: 1,
-        widths: [2, 1, 1, 1],
-        sizes: [N2_U64, N1_U64, N1_U64, N1_U64],
-        capacity: CAP_2111,
-        offset: OFF_1,
-    },
-    BucketDef {
-        id: 2,
-        widths: [1, 2, 1, 1],
-        sizes: [N1_U64, N2_U64, N1_U64, N1_U64],
-        capacity: CAP_2111,
-        offset: OFF_2,
-    },
-    BucketDef {
-        id: 3,
-        widths: [1, 1, 2, 1],
-        sizes: [N1_U64, N1_U64, N2_U64, N1_U64],
-        capacity: CAP_2111,
-        offset: OFF_3,
-    },
-    BucketDef {
-        id: 4,
-        widths: [1, 1, 1, 2],
-        sizes: [N1_U64, N1_U64, N1_U64, N2_U64],
-        capacity: CAP_2111,
-        offset: OFF_4,
-    },
-    BucketDef {
-        id: 5,
-        widths: [3, 1, 1, 1],
-        sizes: [N3_U64, N1_U64, N1_U64, N1_U64],
-        capacity: CAP_3111,
-        offset: OFF_5,
-    },
-    BucketDef {
-        id: 6,
-        widths: [1, 3, 1, 1],
-        sizes: [N1_U64, N3_U64, N1_U64, N1_U64],
-        capacity: CAP_3111,
-        offset: OFF_6,
-    },
-    BucketDef {
-        id: 7,
-        widths: [1, 1, 3, 1],
-        sizes: [N1_U64, N1_U64, N3_U64, N1_U64],
-        capacity: CAP_3111,
-        offset: OFF_7,
-    },
-    BucketDef {
-        id: 8,
-        widths: [1, 1, 1, 3],
-        sizes: [N1_U64, N1_U64, N1_U64, N3_U64],
-        capacity: CAP_3111,
-        offset: OFF_8,
-    },
-    BucketDef {
-        id: 9,
-        widths: [2, 2, 1, 1],
-        sizes: [N2_U64, N2_U64, N1_U64, N1_U64],
-        capacity: CAP_2211,
-        offset: OFF_9,
-    },
-    BucketDef {
-        id: 10,
-        widths: [2, 1, 2, 1],
-        sizes: [N2_U64, N1_U64, N2_U64, N1_U64],
-        capacity: CAP_2211,
-        offset: OFF_10,
-    },
-    BucketDef {
-        id: 11,
-        widths: [2, 1, 1, 2],
-        sizes: [N2_U64, N1_U64, N1_U64, N2_U64],
-        capacity: CAP_2211,
-        offset: OFF_11,
-    },
-    BucketDef {
-        id: 12,
-        widths: [1, 2, 2, 1],
-        sizes: [N1_U64, N2_U64, N2_U64, N1_U64],
-        capacity: CAP_2211,
-        offset: OFF_12,
-    },
-    BucketDef {
-        id: 13,
-        widths: [1, 2, 1, 2],
-        sizes: [N1_U64, N2_U64, N1_U64, N2_U64],
-        capacity: CAP_2211,
-        offset: OFF_13,
-    },
-    BucketDef {
-        id: 14,
-        widths: [1, 1, 2, 2],
-        sizes: [N1_U64, N1_U64, N2_U64, N2_U64],
-        capacity: BUCKET_14_CUTOFF,
-        offset: OFF_14,
-    },
-];
+#[derive(Clone, Copy)]
+pub struct BucketInfo {
+    pub offset: u64,
+    pub widths: [u8; 4],
+    pub radices: [u64; 3], // S2, S3, S4
+}
+
+/// Fully derived at compile-time: offsets and radices for all 15 buckets.
+pub const BUCKET_TABLE: [BucketInfo; 15] = {
+    let mut table = [BucketInfo {
+        offset: 0,
+        widths: [0; 4],
+        radices: [0; 3],
+    }; 15];
+    let mut off = 0u64;
+    let mut i = 0;
+    while i < 15 {
+        let w = BUCKET_WIDTHS[i];
+        let s2 = width_to_radix(w[1]);
+        let s3 = width_to_radix(w[2]);
+        let s4 = width_to_radix(w[3]);
+        let cap = width_to_radix(w[0]) * s2 * s3 * s4;
+        table[i] = BucketInfo {
+            offset: off,
+            widths: w,
+            radices: [s2, s3, s4],
+        };
+        off += cap;
+        i += 1;
+    }
+    table
+};
+
+pub const OFFSETS: [u64; 15] = {
+    let mut offs = [0u64; 15];
+    let mut i = 0;
+    while i < 15 {
+        offs[i] = BUCKET_TABLE[i].offset;
+        i += 1;
+    }
+    offs
+};
+
+pub const BUCKET_14_CUTOFF: u64 = (1u64 << 32) - BUCKET_TABLE[14].offset;
 
 static CHARS_A1: LazyLock<Vec<char>> = LazyLock::new(|| WIDTH_1_CHARS.chars().collect());
 static CHARS_A2: LazyLock<Vec<char>> = LazyLock::new(|| WIDTH_2_CHARS.chars().collect());
@@ -207,14 +137,14 @@ static CHAR_LUT: LazyLock<Box<[u16; 65536]>> = LazyLock::new(|| {
 const COMBO_PARAMS: [(u64, u64, u64, u64); 81] = {
     let mut table = [(0u64, 0u64, 0u64, 0u64); 81];
     let mut id = 0;
-    while id < BUCKETS.len() {
-        let b = BUCKETS[id];
+    while id < 15 {
+        let b = BUCKET_TABLE[id];
         let w = b.widths;
         let combo = ((w[0] - 1) as usize) * 27
             + ((w[1] - 1) as usize) * 9
             + ((w[2] - 1) as usize) * 3
             + ((w[3] - 1) as usize);
-        table[combo] = (b.offset, b.sizes[1], b.sizes[2], b.sizes[3]);
+        table[combo] = (b.offset, b.radices[0], b.radices[1], b.radices[2]);
         id += 1;
     }
     table
@@ -233,83 +163,37 @@ fn char_lut_read(c: char) -> u16 {
     }
 }
 
-/// Inlined mixed-radix decomposition using compile-time constants for reciprocal multiplication.
-#[inline(always)]
-fn decompose<const S2: u64, const S3: u64, const S4: u64>(
-    mut rem: u64,
-) -> (usize, usize, usize, usize) {
-    let i4 = (rem % S4) as usize;
-    rem /= S4;
-    let i3 = (rem % S3) as usize;
-    rem /= S3;
-    let i2 = (rem % S2) as usize;
-    rem /= S2;
-    let i1 = rem as usize;
-    (i1, i2, i3, i4)
-}
-
-#[inline(always)]
+#[inline]
 pub fn encode_u32(val: u32) -> [char; 4] {
     let v = val as u64;
+    let bucket_id = OFFSETS.partition_point(|&off| off <= v) - 1;
+    let b = &BUCKET_TABLE[bucket_id];
+    let mut rem = v - b.offset;
+
+    let i4 = (rem % b.radices[2]) as usize;
+    rem /= b.radices[2];
+    let i3 = (rem % b.radices[1]) as usize;
+    rem /= b.radices[1];
+    let i2 = (rem % b.radices[0]) as usize;
+    let i1 = (rem / b.radices[0]) as usize;
+
     let a1 = &*CHARS_A1;
     let a2 = &*CHARS_A2;
     let a3 = &*CHARS_A3;
-
-    if v < OFF_5 {
-        if v < OFF_1 {
-            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N1_U64>(v - OFF_0);
-            [a1[i1], a1[i2], a1[i3], a1[i4]]
-        } else if v < OFF_2 {
-            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N1_U64>(v - OFF_1);
-            [a2[i1], a1[i2], a1[i3], a1[i4]]
-        } else if v < OFF_3 {
-            let (i1, i2, i3, i4) = decompose::<N2_U64, N1_U64, N1_U64>(v - OFF_2);
-            [a1[i1], a2[i2], a1[i3], a1[i4]]
-        } else if v < OFF_4 {
-            let (i1, i2, i3, i4) = decompose::<N1_U64, N2_U64, N1_U64>(v - OFF_3);
-            [a1[i1], a1[i2], a2[i3], a1[i4]]
-        } else {
-            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N2_U64>(v - OFF_4);
-            [a1[i1], a1[i2], a1[i3], a2[i4]]
-        }
-    } else if v < OFF_9 {
-        if v < OFF_6 {
-            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N1_U64>(v - OFF_5);
-            [a3[i1], a1[i2], a1[i3], a1[i4]]
-        } else if v < OFF_7 {
-            let (i1, i2, i3, i4) = decompose::<N3_U64, N1_U64, N1_U64>(v - OFF_6);
-            [a1[i1], a3[i2], a1[i3], a1[i4]]
-        } else if v < OFF_8 {
-            let (i1, i2, i3, i4) = decompose::<N1_U64, N3_U64, N1_U64>(v - OFF_7);
-            [a1[i1], a1[i2], a3[i3], a1[i4]]
-        } else {
-            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N3_U64>(v - OFF_8);
-            [a1[i1], a1[i2], a1[i3], a3[i4]]
-        }
-    } else {
-        if v < OFF_10 {
-            let (i1, i2, i3, i4) = decompose::<N2_U64, N1_U64, N1_U64>(v - OFF_9);
-            [a2[i1], a2[i2], a1[i3], a1[i4]]
-        } else if v < OFF_11 {
-            let (i1, i2, i3, i4) = decompose::<N1_U64, N2_U64, N1_U64>(v - OFF_10);
-            [a2[i1], a1[i2], a2[i3], a1[i4]]
-        } else if v < OFF_12 {
-            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N2_U64>(v - OFF_11);
-            [a2[i1], a1[i2], a1[i3], a2[i4]]
-        } else if v < OFF_13 {
-            let (i1, i2, i3, i4) = decompose::<N2_U64, N2_U64, N1_U64>(v - OFF_12);
-            [a1[i1], a2[i2], a2[i3], a1[i4]]
-        } else if v < OFF_14 {
-            let (i1, i2, i3, i4) = decompose::<N2_U64, N1_U64, N2_U64>(v - OFF_13);
-            [a1[i1], a2[i2], a1[i3], a2[i4]]
-        } else {
-            let (i1, i2, i3, i4) = decompose::<N1_U64, N2_U64, N2_U64>(v - OFF_14);
-            [a1[i1], a1[i2], a2[i3], a2[i4]]
-        }
-    }
+    let glyph = |w: u8, idx: usize| match w {
+        1 => a1[idx],
+        2 => a2[idx],
+        _ => a3[idx],
+    };
+    [
+        glyph(b.widths[0], i1),
+        glyph(b.widths[1], i2),
+        glyph(b.widths[2], i3),
+        glyph(b.widths[3], i4),
+    ]
 }
 
-#[inline(always)]
+#[inline]
 pub fn decode_u32(q: &[char; 4]) -> Result<u32, &'static str> {
     let e1 = char_lut_read(q[0]);
     let e2 = char_lut_read(q[1]);
@@ -432,70 +316,93 @@ pub fn encode_rust(input: &[u8]) -> String {
     result
 }
 
+/// Decode `quartets_to_read` data quartets from a char iterator directly into `output`.
+#[inline]
+fn decode_quartets_into(
+    char_iter: &mut impl Iterator<Item = char>,
+    quartets_to_read: usize,
+    output: &mut Vec<u8>,
+) -> PyResult<()> {
+    for _ in 0..quartets_to_read {
+        let c0 = char_iter
+            .next()
+            .ok_or_else(|| PyValueError::new_err("Corrupt data quartet: incomplete"))?;
+        let c1 = char_iter
+            .next()
+            .ok_or_else(|| PyValueError::new_err("Corrupt data quartet: incomplete"))?;
+        let c2 = char_iter
+            .next()
+            .ok_or_else(|| PyValueError::new_err("Corrupt data quartet: incomplete"))?;
+        let c3 = char_iter
+            .next()
+            .ok_or_else(|| PyValueError::new_err("Corrupt data quartet: incomplete"))?;
+        let val = decode_u32(&[c0, c1, c2, c3])
+            .map_err(|e| PyValueError::new_err(format!("Corrupt data quartet: {e}")))?;
+        output.extend_from_slice(&val.to_le_bytes());
+    }
+    Ok(())
+}
+
+/// Skip padding quartets without decoding them.
+#[inline]
+fn skip_quartets(char_iter: &mut impl Iterator<Item = char>, quartets: usize) {
+    for _ in 0..quartets * 4 {
+        char_iter.next();
+    }
+}
+
 #[pyfunction]
 pub fn decode_rust(input: &str) -> PyResult<Vec<u8>> {
-    let chars: Vec<char> = input.chars().collect();
-    if chars.is_empty() {
+    let char_count = input.chars().count();
+    if char_count == 0 {
         return Err(PyValueError::new_err("Input text is empty"));
     }
-    if chars.len() < 4 || chars.len() % 4 != 0 {
+    if char_count < 4 || char_count % 4 != 0 {
         return Err(PyValueError::new_err(format!(
             "Input character count {} is not a multiple of 4",
-            chars.len()
+            char_count
         )));
     }
 
+    let mut char_iter = input.chars();
+
     // Decode Quartet 0 (chars 0..4)
-    let mut q0 = [' '; 4];
-    q0.copy_from_slice(&chars[0..4]);
-    let len = decode_u32(&q0).map_err(|e| PyValueError::new_err(format!("Corrupt header: {e}")))?
-        as usize;
+    let c0 = char_iter.next().unwrap();
+    let c1 = char_iter.next().unwrap();
+    let c2 = char_iter.next().unwrap();
+    let c3 = char_iter.next().unwrap();
+    let len = decode_u32(&[c0, c1, c2, c3])
+        .map_err(|e| PyValueError::new_err(format!("Corrupt header: {e}")))? as usize;
 
     if len == 0 {
         return Ok(Vec::new());
     }
 
-    // `len` comes from the untrusted header; `div_ceil` avoids the `len + 3` overflow
-    // that `(len + 3) / 4` would hit on 32-bit targets for `u32::MAX`.
     let total_data_quartets = len.div_ceil(4);
-    let max_possible_quartets = chars.len().saturating_sub(4) / 4;
+    let max_possible_quartets = (char_count - 4) / 4;
     let safe_capacity_quartets = total_data_quartets.min(max_possible_quartets);
     let mut output = Vec::with_capacity(safe_capacity_quartets * 4);
+
     // If formatted as pages (multiples of 1024 chars):
-    if chars.len() >= CHARS_PER_PAGE && chars.len() % CHARS_PER_PAGE == 0 {
-        let total_pages = chars.len() / CHARS_PER_PAGE;
+    if char_count >= CHARS_PER_PAGE && char_count % CHARS_PER_PAGE == 0 {
+        let total_pages = char_count / CHARS_PER_PAGE;
         let mut data_quartets_read = 0;
 
         // Page 1
-        let p1_chars = &chars[0..CHARS_PER_PAGE];
         let p1_needed = total_data_quartets.min(DATA_QUARTETS_PAGE_1);
-        for q_idx in 1..=p1_needed {
-            let chunk = &p1_chars[q_idx * 4..(q_idx + 1) * 4];
-            let mut q = [' '; 4];
-            q.copy_from_slice(chunk);
-            let val = decode_u32(&q)
-                .map_err(|e| PyValueError::new_err(format!("Corrupt data quartet: {e}")))?;
-            output.extend_from_slice(&val.to_le_bytes());
-            data_quartets_read += 1;
-        }
+        decode_quartets_into(&mut char_iter, p1_needed, &mut output)?;
+        data_quartets_read += p1_needed;
+        skip_quartets(&mut char_iter, DATA_QUARTETS_PAGE_1 - p1_needed);
 
         // Subsequent pages
-        for p in 1..total_pages {
+        for _p in 1..total_pages {
             if data_quartets_read >= total_data_quartets {
                 break;
             }
-            let page_start = p * CHARS_PER_PAGE;
-            let page_chars = &chars[page_start..page_start + CHARS_PER_PAGE];
             let p_needed = (total_data_quartets - data_quartets_read).min(DATA_QUARTETS_SUBSEQUENT);
-            for q_idx in 0..p_needed {
-                let chunk = &page_chars[q_idx * 4..(q_idx + 1) * 4];
-                let mut q = [' '; 4];
-                q.copy_from_slice(chunk);
-                let val = decode_u32(&q)
-                    .map_err(|e| PyValueError::new_err(format!("Corrupt data quartet: {e}")))?;
-                output.extend_from_slice(&val.to_le_bytes());
-                data_quartets_read += 1;
-            }
+            decode_quartets_into(&mut char_iter, p_needed, &mut output)?;
+            data_quartets_read += p_needed;
+            skip_quartets(&mut char_iter, DATA_QUARTETS_SUBSEQUENT - p_needed);
         }
 
         if data_quartets_read < total_data_quartets {
@@ -505,19 +412,13 @@ pub fn decode_rust(input: &str) -> PyResult<Vec<u8>> {
         }
     } else {
         // Fallback for unpadded continuous streams
-        let available_data_quartets = (chars.len() / 4) - 1;
+        let available_data_quartets = (char_count / 4) - 1;
         if available_data_quartets < total_data_quartets {
             return Err(PyValueError::new_err(format!(
                 "Payload requires {total_data_quartets} quartets, but only {available_data_quartets} available"
             )));
         }
-        for chunk in chars[4..4 + total_data_quartets * 4].chunks_exact(4) {
-            let mut q = [' '; 4];
-            q.copy_from_slice(chunk);
-            let val = decode_u32(&q)
-                .map_err(|e| PyValueError::new_err(format!("Corrupt data quartet: {e}")))?;
-            output.extend_from_slice(&val.to_le_bytes());
-        }
+        decode_quartets_into(&mut char_iter, total_data_quartets, &mut output)?;
     }
 
     output.truncate(len);
@@ -535,7 +436,7 @@ pub fn decode_u32_py(quartet: Vec<char>) -> PyResult<u32> {
     }
     let mut q = [' '; 4];
     q.copy_from_slice(&quartet);
-    decode_u32(&q).map_err(|e| PyValueError::new_err(e))
+    decode_u32(&q).map_err(PyValueError::new_err)
 }
 
 #[pyfunction]
@@ -686,25 +587,29 @@ impl PageDecoder {
             Err(e) => return Err(e),
         };
 
-        let page: String = page_obj.downcast::<PyString>()?.to_str()?.to_string();
-        let chars: Vec<char> = page.chars().collect();
+        let page_bound = page_obj.downcast::<PyString>()?;
+        let page_str = page_bound.to_str()?;
+        let char_count = page_str.chars().count();
 
-        if chars.len() != CHARS_PER_PAGE {
+        if char_count != CHARS_PER_PAGE {
             let which = if self.page_index == 0 {
                 "Page 1"
             } else {
                 "Page"
             };
             return Err(PyValueError::new_err(format!(
-                "{which} has invalid length: {} (must be {CHARS_PER_PAGE} characters)",
-                chars.len()
+                "{which} has invalid length: {char_count} (must be {CHARS_PER_PAGE} characters)"
             )));
         }
 
-        let (first_quartet, bytes_needed) = if self.page_index == 0 {
-            let mut q = [' '; 4];
-            q.copy_from_slice(&chars[0..4]);
-            let total_len = decode_u32(&q)
+        let mut char_iter = page_str.chars();
+
+        let (bytes_needed, pad_quartets) = if self.page_index == 0 {
+            let c0 = char_iter.next().unwrap();
+            let c1 = char_iter.next().unwrap();
+            let c2 = char_iter.next().unwrap();
+            let c3 = char_iter.next().unwrap();
+            let total_len = decode_u32(&[c0, c1, c2, c3])
                 .map_err(|e| PyValueError::new_err(format!("Corrupt header: {e}")))?
                 as usize;
             if total_len == 0 {
@@ -712,21 +617,19 @@ impl PageDecoder {
                 return Ok(None);
             }
             self.remaining = total_len;
-            (1usize, total_len.min(BYTES_PAGE_1))
+            let needed = total_len.min(BYTES_PAGE_1);
+            let q_needed = needed.div_ceil(4);
+            (needed, DATA_QUARTETS_PAGE_1 - q_needed)
         } else {
-            (0usize, self.remaining.min(BYTES_SUBSEQUENT))
+            let needed = self.remaining.min(BYTES_SUBSEQUENT);
+            let q_needed = needed.div_ceil(4);
+            (needed, DATA_QUARTETS_SUBSEQUENT - q_needed)
         };
 
         let q_needed = bytes_needed.div_ceil(4);
         let mut buf: Vec<u8> = Vec::with_capacity(q_needed * 4);
-        for k in 0..q_needed {
-            let base = (first_quartet + k) * 4;
-            let mut q = [' '; 4];
-            q.copy_from_slice(&chars[base..base + 4]);
-            let val = decode_u32(&q)
-                .map_err(|e| PyValueError::new_err(format!("Corrupt data quartet: {e}")))?;
-            buf.extend_from_slice(&val.to_le_bytes());
-        }
+        decode_quartets_into(&mut char_iter, q_needed, &mut buf)?;
+        skip_quartets(&mut char_iter, pad_quartets);
         buf.truncate(bytes_needed);
 
         self.remaining -= bytes_needed;
@@ -902,7 +805,7 @@ mod tests {
     /// `BUCKET_14_CUTOFF` check in the table-driven decoder.
     #[test]
     fn test_bucket14_cutoff_is_the_32bit_boundary() {
-        assert_eq!(OFF_14 + BUCKET_14_CUTOFF, 1u64 << 32);
+        assert_eq!(BUCKET_TABLE[14].offset + BUCKET_14_CUTOFF, 1u64 << 32);
     }
 
     /// Exercises every bucket's first value and its predecessor, so a wrong stride, radix
@@ -910,7 +813,7 @@ mod tests {
     #[test]
     fn test_every_bucket_boundary_roundtrips() {
         let mut values: Vec<u32> = Vec::new();
-        for (id, bucket) in BUCKETS.iter().enumerate() {
+        for (id, bucket) in BUCKET_TABLE.iter().enumerate() {
             let start = bucket.offset;
             assert!(start < (1u64 << 32), "bucket {id} offset out of range");
             values.push(start as u32);
@@ -933,7 +836,7 @@ mod tests {
         // Every `COMBO_PARAMS` slot is populated by exactly one bucket, and the 15 bucket ids
         // cover 15 distinct combos. A duplicate combo would silently shadow a bucket.
         let mut seen = [false; 81];
-        for bucket in BUCKETS.iter() {
+        for (id, bucket) in BUCKET_TABLE.iter().enumerate() {
             let w = bucket.widths;
             let combo = ((w[0] - 1) as usize) * 27
                 + ((w[1] - 1) as usize) * 9
@@ -945,14 +848,13 @@ mod tests {
                 COMBO_PARAMS[combo],
                 (
                     bucket.offset,
-                    bucket.sizes[1],
-                    bucket.sizes[2],
-                    bucket.sizes[3]
+                    bucket.radices[0],
+                    bucket.radices[1],
+                    bucket.radices[2]
                 ),
-                "COMBO_PARAMS[{combo}] does not match bucket {}",
-                bucket.id
+                "COMBO_PARAMS[{combo}] does not match bucket {id}"
             );
         }
-        assert_eq!(seen.iter().filter(|&&s| s).count(), BUCKETS.len());
+        assert_eq!(seen.iter().filter(|&&s| s).count(), BUCKET_TABLE.len());
     }
 }
