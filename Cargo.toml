@@ -2,7 +2,7 @@
 
 [package]
 name = "bookette"
-version = "3.0.0"
+version = "4.0.0"
 edition = "2021"
 
 [lib]
@@ -10,6 +10,4 @@ name = "bookette"
 crate-type = ["cdylib"]
 
 [dependencies]
-bitstream-io = "4.5.0"
-lazy_static = "1.5.0"
 pyo3 = { version = "0.26.0", features = ["extension-module"] }
