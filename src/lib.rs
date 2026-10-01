@@ -6,11 +6,38 @@ const WIDTH_1_CHARS: &str = include_str!("1_width.txt");
 const WIDTH_2_CHARS: &str = include_str!("2_width.txt");
 const WIDTH_3_CHARS: &str = include_str!("3_width.txt");
 
-const N1: usize = 106;
-const N2: usize = 211;
-const N3: usize = 38;
+pub const N1: usize = 106;
+pub const N2: usize = 211;
+pub const N3: usize = 38;
 
-const BUCKET_14_CUTOFF: u64 = 481_277_884;
+const N1_U64: u64 = N1 as u64;
+const N2_U64: u64 = N2 as u64;
+const N3_U64: u64 = N3 as u64;
+
+// Capacities of the 4 structural bucket shapes:
+const CAP_1111: u64 = N1_U64 * N1_U64 * N1_U64 * N1_U64; // 126_247_696
+const CAP_2111: u64 = N2_U64 * N1_U64 * N1_U64 * N1_U64; // 251_304_376
+const CAP_3111: u64 = N3_U64 * N1_U64 * N1_U64 * N1_U64; // 45_258_608
+const CAP_2211: u64 = N2_U64 * N2_U64 * N1_U64 * N1_U64; // 500_237_956
+
+// Offsets derived continuously from bucket capacities:
+const OFF_0: u64 = 0;
+const OFF_1: u64 = OFF_0 + CAP_1111;
+const OFF_2: u64 = OFF_1 + CAP_2111;
+const OFF_3: u64 = OFF_2 + CAP_2111;
+const OFF_4: u64 = OFF_3 + CAP_2111;
+const OFF_5: u64 = OFF_4 + CAP_2111;
+const OFF_6: u64 = OFF_5 + CAP_3111;
+const OFF_7: u64 = OFF_6 + CAP_3111;
+const OFF_8: u64 = OFF_7 + CAP_3111;
+const OFF_9: u64 = OFF_8 + CAP_3111;
+const OFF_10: u64 = OFF_9 + CAP_2211;
+const OFF_11: u64 = OFF_10 + CAP_2211;
+const OFF_12: u64 = OFF_11 + CAP_2211;
+const OFF_13: u64 = OFF_12 + CAP_2211;
+const OFF_14: u64 = OFF_13 + CAP_2211;
+
+pub const BUCKET_14_CUTOFF: u64 = 481_277_884;
 
 pub const MAX_BYTES_PER_PAGE: usize = 1024;
 const QUARTETS_PER_PAGE: usize = 256;
@@ -28,21 +55,21 @@ pub struct BucketDef {
 }
 
 pub const BUCKETS: [BucketDef; 15] = [
-    BucketDef { id: 0,  widths: [1, 1, 1, 1], sizes: [106, 106, 106, 106], capacity: 126_247_696, offset: 0 },
-    BucketDef { id: 1,  widths: [2, 1, 1, 1], sizes: [211, 106, 106, 106], capacity: 251_304_376, offset: 126_247_696 },
-    BucketDef { id: 2,  widths: [1, 2, 1, 1], sizes: [106, 211, 106, 106], capacity: 251_304_376, offset: 377_552_072 },
-    BucketDef { id: 3,  widths: [1, 1, 2, 1], sizes: [106, 106, 211, 106], capacity: 251_304_376, offset: 628_856_448 },
-    BucketDef { id: 4,  widths: [1, 1, 1, 2], sizes: [106, 106, 106, 211], capacity: 251_304_376, offset: 880_160_824 },
-    BucketDef { id: 5,  widths: [3, 1, 1, 1], sizes: [38,  106, 106, 106], capacity: 45_258_608,  offset: 1_131_465_200 },
-    BucketDef { id: 6,  widths: [1, 3, 1, 1], sizes: [106, 38,  106, 106], capacity: 45_258_608,  offset: 1_176_723_808 },
-    BucketDef { id: 7,  widths: [1, 1, 3, 1], sizes: [106, 106, 38,  106], capacity: 45_258_608,  offset: 1_221_982_416 },
-    BucketDef { id: 8,  widths: [1, 1, 1, 3], sizes: [106, 106, 106, 38 ], capacity: 45_258_608,  offset: 1_267_241_024 },
-    BucketDef { id: 9,  widths: [2, 2, 1, 1], sizes: [211, 211, 106, 106], capacity: 500_237_956, offset: 1_312_499_632 },
-    BucketDef { id: 10, widths: [2, 1, 2, 1], sizes: [211, 106, 211, 106], capacity: 500_237_956, offset: 1_812_737_588 },
-    BucketDef { id: 11, widths: [2, 1, 1, 2], sizes: [211, 106, 106, 211], capacity: 500_237_956, offset: 2_312_975_544 },
-    BucketDef { id: 12, widths: [1, 2, 2, 1], sizes: [106, 211, 211, 106], capacity: 500_237_956, offset: 2_813_213_500 },
-    BucketDef { id: 13, widths: [1, 2, 1, 2], sizes: [106, 211, 106, 211], capacity: 500_237_956, offset: 3_313_451_456 },
-    BucketDef { id: 14, widths: [1, 1, 2, 2], sizes: [106, 106, 211, 211], capacity: 481_277_884, offset: 3_813_689_412 },
+    BucketDef { id: 0,  widths: [1, 1, 1, 1], sizes: [N1_U64, N1_U64, N1_U64, N1_U64], capacity: CAP_1111, offset: OFF_0 },
+    BucketDef { id: 1,  widths: [2, 1, 1, 1], sizes: [N2_U64, N1_U64, N1_U64, N1_U64], capacity: CAP_2111, offset: OFF_1 },
+    BucketDef { id: 2,  widths: [1, 2, 1, 1], sizes: [N1_U64, N2_U64, N1_U64, N1_U64], capacity: CAP_2111, offset: OFF_2 },
+    BucketDef { id: 3,  widths: [1, 1, 2, 1], sizes: [N1_U64, N1_U64, N2_U64, N1_U64], capacity: CAP_2111, offset: OFF_3 },
+    BucketDef { id: 4,  widths: [1, 1, 1, 2], sizes: [N1_U64, N1_U64, N1_U64, N2_U64], capacity: CAP_2111, offset: OFF_4 },
+    BucketDef { id: 5,  widths: [3, 1, 1, 1], sizes: [N3_U64, N1_U64, N1_U64, N1_U64], capacity: CAP_3111, offset: OFF_5 },
+    BucketDef { id: 6,  widths: [1, 3, 1, 1], sizes: [N1_U64, N3_U64, N1_U64, N1_U64], capacity: CAP_3111, offset: OFF_6 },
+    BucketDef { id: 7,  widths: [1, 1, 3, 1], sizes: [N1_U64, N1_U64, N3_U64, N1_U64], capacity: CAP_3111, offset: OFF_7 },
+    BucketDef { id: 8,  widths: [1, 1, 1, 3], sizes: [N1_U64, N1_U64, N1_U64, N3_U64], capacity: CAP_3111, offset: OFF_8 },
+    BucketDef { id: 9,  widths: [2, 2, 1, 1], sizes: [N2_U64, N2_U64, N1_U64, N1_U64], capacity: CAP_2211, offset: OFF_9 },
+    BucketDef { id: 10, widths: [2, 1, 2, 1], sizes: [N2_U64, N1_U64, N2_U64, N1_U64], capacity: CAP_2211, offset: OFF_10 },
+    BucketDef { id: 11, widths: [2, 1, 1, 2], sizes: [N2_U64, N1_U64, N1_U64, N2_U64], capacity: CAP_2211, offset: OFF_11 },
+    BucketDef { id: 12, widths: [1, 2, 2, 1], sizes: [N1_U64, N2_U64, N2_U64, N1_U64], capacity: CAP_2211, offset: OFF_12 },
+    BucketDef { id: 13, widths: [1, 2, 1, 2], sizes: [N1_U64, N2_U64, N1_U64, N2_U64], capacity: CAP_2211, offset: OFF_13 },
+    BucketDef { id: 14, widths: [1, 1, 2, 2], sizes: [N1_U64, N1_U64, N2_U64, N2_U64], capacity: BUCKET_14_CUTOFF, offset: OFF_14 },
 ];
 
 static CHARS_A1: LazyLock<Vec<char>> = LazyLock::new(|| WIDTH_1_CHARS.chars().collect());
@@ -70,21 +97,21 @@ fn char_lookup(c: char) -> Option<(u8, usize)> {
     }
 }
 
-const OFF_0: u64 = 0;
-const OFF_1: u64 = 126_247_696;
-const OFF_2: u64 = 377_552_072;
-const OFF_3: u64 = 628_856_448;
-const OFF_4: u64 = 880_160_824;
-const OFF_5: u64 = 1_131_465_200;
-const OFF_6: u64 = 1_176_723_808;
-const OFF_7: u64 = 1_221_982_416;
-const OFF_8: u64 = 1_267_241_024;
-const OFF_9: u64 = 1_312_499_632;
-const OFF_10: u64 = 1_812_737_588;
-const OFF_11: u64 = 2_312_975_544;
-const OFF_12: u64 = 2_813_213_500;
-const OFF_13: u64 = 3_313_451_456;
-const OFF_14: u64 = 3_813_689_412;
+/// Inlined mixed-radix decomposition using compile-time constants for reciprocal multiplication.
+#[inline(always)]
+fn decompose<const S2: u64, const S3: u64, const S4: u64>(mut rem: u64) -> (usize, usize, usize, usize) {
+    let i4 = (rem % S4) as usize; rem /= S4;
+    let i3 = (rem % S3) as usize; rem /= S3;
+    let i2 = (rem % S2) as usize; rem /= S2;
+    let i1 = rem as usize;
+    (i1, i2, i3, i4)
+}
+
+/// Inlined mixed-radix recomposition using compile-time constants.
+#[inline(always)]
+fn recompose<const S2: u64, const S3: u64, const S4: u64>(i1: u64, i2: u64, i3: u64, i4: u64) -> u64 {
+    ((i1 * S2 + i2) * S3 + i3) * S4 + i4
+}
 
 #[inline(always)]
 pub fn encode_u32(val: u32) -> [char; 4] {
@@ -95,113 +122,53 @@ pub fn encode_u32(val: u32) -> [char; 4] {
 
     if v < OFF_5 {
         if v < OFF_1 {
-            let mut rem = v - OFF_0;
-            let i4 = (rem % 106) as usize; rem /= 106;
-            let i3 = (rem % 106) as usize; rem /= 106;
-            let i2 = (rem % 106) as usize; rem /= 106;
-            let i1 = rem as usize;
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N1_U64>(v - OFF_0);
             [a1[i1], a1[i2], a1[i3], a1[i4]]
         } else if v < OFF_2 {
-            let mut rem = v - OFF_1;
-            let i4 = (rem % 106) as usize; rem /= 106;
-            let i3 = (rem % 106) as usize; rem /= 106;
-            let i2 = (rem % 106) as usize; rem /= 106;
-            let i1 = rem as usize;
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N1_U64>(v - OFF_1);
             [a2[i1], a1[i2], a1[i3], a1[i4]]
         } else if v < OFF_3 {
-            let mut rem = v - OFF_2;
-            let i4 = (rem % 106) as usize; rem /= 106;
-            let i3 = (rem % 106) as usize; rem /= 106;
-            let i2 = (rem % 211) as usize; rem /= 211;
-            let i1 = rem as usize;
+            let (i1, i2, i3, i4) = decompose::<N2_U64, N1_U64, N1_U64>(v - OFF_2);
             [a1[i1], a2[i2], a1[i3], a1[i4]]
         } else if v < OFF_4 {
-            let mut rem = v - OFF_3;
-            let i4 = (rem % 106) as usize; rem /= 106;
-            let i3 = (rem % 211) as usize; rem /= 211;
-            let i2 = (rem % 106) as usize; rem /= 106;
-            let i1 = rem as usize;
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N2_U64, N1_U64>(v - OFF_3);
             [a1[i1], a1[i2], a2[i3], a1[i4]]
         } else {
-            let mut rem = v - OFF_4;
-            let i4 = (rem % 211) as usize; rem /= 211;
-            let i3 = (rem % 106) as usize; rem /= 106;
-            let i2 = (rem % 106) as usize; rem /= 106;
-            let i1 = rem as usize;
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N2_U64>(v - OFF_4);
             [a1[i1], a1[i2], a1[i3], a2[i4]]
         }
     } else if v < OFF_9 {
         if v < OFF_6 {
-            let mut rem = v - OFF_5;
-            let i4 = (rem % 106) as usize; rem /= 106;
-            let i3 = (rem % 106) as usize; rem /= 106;
-            let i2 = (rem % 106) as usize; rem /= 106;
-            let i1 = rem as usize;
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N1_U64>(v - OFF_5);
             [a3[i1], a1[i2], a1[i3], a1[i4]]
         } else if v < OFF_7 {
-            let mut rem = v - OFF_6;
-            let i4 = (rem % 106) as usize; rem /= 106;
-            let i3 = (rem % 106) as usize; rem /= 106;
-            let i2 = (rem % 38) as usize; rem /= 38;
-            let i1 = rem as usize;
+            let (i1, i2, i3, i4) = decompose::<N3_U64, N1_U64, N1_U64>(v - OFF_6);
             [a1[i1], a3[i2], a1[i3], a1[i4]]
         } else if v < OFF_8 {
-            let mut rem = v - OFF_7;
-            let i4 = (rem % 106) as usize; rem /= 106;
-            let i3 = (rem % 38) as usize; rem /= 38;
-            let i2 = (rem % 106) as usize; rem /= 106;
-            let i1 = rem as usize;
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N3_U64, N1_U64>(v - OFF_7);
             [a1[i1], a1[i2], a3[i3], a1[i4]]
         } else {
-            let mut rem = v - OFF_8;
-            let i4 = (rem % 38) as usize; rem /= 38;
-            let i3 = (rem % 106) as usize; rem /= 106;
-            let i2 = (rem % 106) as usize; rem /= 106;
-            let i1 = rem as usize;
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N3_U64>(v - OFF_8);
             [a1[i1], a1[i2], a1[i3], a3[i4]]
         }
     } else {
         if v < OFF_10 {
-            let mut rem = v - OFF_9;
-            let i4 = (rem % 106) as usize; rem /= 106;
-            let i3 = (rem % 106) as usize; rem /= 106;
-            let i2 = (rem % 211) as usize; rem /= 211;
-            let i1 = rem as usize;
+            let (i1, i2, i3, i4) = decompose::<N2_U64, N1_U64, N1_U64>(v - OFF_9);
             [a2[i1], a2[i2], a1[i3], a1[i4]]
         } else if v < OFF_11 {
-            let mut rem = v - OFF_10;
-            let i4 = (rem % 106) as usize; rem /= 106;
-            let i3 = (rem % 211) as usize; rem /= 211;
-            let i2 = (rem % 106) as usize; rem /= 106;
-            let i1 = rem as usize;
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N2_U64, N1_U64>(v - OFF_10);
             [a2[i1], a1[i2], a2[i3], a1[i4]]
         } else if v < OFF_12 {
-            let mut rem = v - OFF_11;
-            let i4 = (rem % 211) as usize; rem /= 211;
-            let i3 = (rem % 106) as usize; rem /= 106;
-            let i2 = (rem % 106) as usize; rem /= 106;
-            let i1 = rem as usize;
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N1_U64, N2_U64>(v - OFF_11);
             [a2[i1], a1[i2], a1[i3], a2[i4]]
         } else if v < OFF_13 {
-            let mut rem = v - OFF_12;
-            let i4 = (rem % 106) as usize; rem /= 106;
-            let i3 = (rem % 211) as usize; rem /= 211;
-            let i2 = (rem % 211) as usize; rem /= 211;
-            let i1 = rem as usize;
+            let (i1, i2, i3, i4) = decompose::<N2_U64, N2_U64, N1_U64>(v - OFF_12);
             [a1[i1], a2[i2], a2[i3], a1[i4]]
         } else if v < OFF_14 {
-            let mut rem = v - OFF_13;
-            let i4 = (rem % 211) as usize; rem /= 211;
-            let i3 = (rem % 106) as usize; rem /= 106;
-            let i2 = (rem % 211) as usize; rem /= 211;
-            let i1 = rem as usize;
+            let (i1, i2, i3, i4) = decompose::<N2_U64, N1_U64, N2_U64>(v - OFF_13);
             [a1[i1], a2[i2], a1[i3], a2[i4]]
         } else {
-            let mut rem = v - OFF_14;
-            let i4 = (rem % 211) as usize; rem /= 211;
-            let i3 = (rem % 211) as usize; rem /= 211;
-            let i2 = (rem % 106) as usize; rem /= 106;
-            let i1 = rem as usize;
+            let (i1, i2, i3, i4) = decompose::<N1_U64, N2_U64, N2_U64>(v - OFF_14);
             [a1[i1], a1[i2], a2[i3], a2[i4]]
         }
     }
@@ -220,22 +187,22 @@ pub fn decode_u32(q: &[char; 4]) -> Result<u32, &'static str> {
     let i4 = i4 as u64;
 
     let (off, rem) = match (w1, w2, w3, w4) {
-        (1, 1, 1, 1) => (OFF_0, ((i1 * 106 + i2) * 106 + i3) * 106 + i4),
-        (2, 1, 1, 1) => (OFF_1, ((i1 * 106 + i2) * 106 + i3) * 106 + i4),
-        (1, 2, 1, 1) => (OFF_2, ((i1 * 211 + i2) * 106 + i3) * 106 + i4),
-        (1, 1, 2, 1) => (OFF_3, ((i1 * 106 + i2) * 211 + i3) * 106 + i4),
-        (1, 1, 1, 2) => (OFF_4, ((i1 * 106 + i2) * 106 + i3) * 211 + i4),
-        (3, 1, 1, 1) => (OFF_5, ((i1 * 106 + i2) * 106 + i3) * 106 + i4),
-        (1, 3, 1, 1) => (OFF_6, ((i1 * 38  + i2) * 106 + i3) * 106 + i4),
-        (1, 1, 3, 1) => (OFF_7, ((i1 * 106 + i2) * 38  + i3) * 106 + i4),
-        (1, 1, 1, 3) => (OFF_8, ((i1 * 106 + i2) * 106 + i3) * 38  + i4),
-        (2, 2, 1, 1) => (OFF_9, ((i1 * 211 + i2) * 106 + i3) * 106 + i4),
-        (2, 1, 2, 1) => (OFF_10, ((i1 * 106 + i2) * 211 + i3) * 106 + i4),
-        (2, 1, 1, 2) => (OFF_11, ((i1 * 106 + i2) * 106 + i3) * 211 + i4),
-        (1, 2, 2, 1) => (OFF_12, ((i1 * 211 + i2) * 211 + i3) * 106 + i4),
-        (1, 2, 1, 2) => (OFF_13, ((i1 * 211 + i2) * 106 + i3) * 211 + i4),
+        (1, 1, 1, 1) => (OFF_0, recompose::<N1_U64, N1_U64, N1_U64>(i1, i2, i3, i4)),
+        (2, 1, 1, 1) => (OFF_1, recompose::<N1_U64, N1_U64, N1_U64>(i1, i2, i3, i4)),
+        (1, 2, 1, 1) => (OFF_2, recompose::<N2_U64, N1_U64, N1_U64>(i1, i2, i3, i4)),
+        (1, 1, 2, 1) => (OFF_3, recompose::<N1_U64, N2_U64, N1_U64>(i1, i2, i3, i4)),
+        (1, 1, 1, 2) => (OFF_4, recompose::<N1_U64, N1_U64, N2_U64>(i1, i2, i3, i4)),
+        (3, 1, 1, 1) => (OFF_5, recompose::<N1_U64, N1_U64, N1_U64>(i1, i2, i3, i4)),
+        (1, 3, 1, 1) => (OFF_6, recompose::<N3_U64, N1_U64, N1_U64>(i1, i2, i3, i4)),
+        (1, 1, 3, 1) => (OFF_7, recompose::<N1_U64, N3_U64, N1_U64>(i1, i2, i3, i4)),
+        (1, 1, 1, 3) => (OFF_8, recompose::<N1_U64, N1_U64, N3_U64>(i1, i2, i3, i4)),
+        (2, 2, 1, 1) => (OFF_9, recompose::<N2_U64, N1_U64, N1_U64>(i1, i2, i3, i4)),
+        (2, 1, 2, 1) => (OFF_10, recompose::<N1_U64, N2_U64, N1_U64>(i1, i2, i3, i4)),
+        (2, 1, 1, 2) => (OFF_11, recompose::<N1_U64, N1_U64, N2_U64>(i1, i2, i3, i4)),
+        (1, 2, 2, 1) => (OFF_12, recompose::<N2_U64, N2_U64, N1_U64>(i1, i2, i3, i4)),
+        (1, 2, 1, 2) => (OFF_13, recompose::<N2_U64, N1_U64, N2_U64>(i1, i2, i3, i4)),
         (1, 1, 2, 2) => {
-            let r = ((i1 * 106 + i2) * 211 + i3) * 211 + i4;
+            let r = recompose::<N1_U64, N2_U64, N2_U64>(i1, i2, i3, i4);
             if r >= BUCKET_14_CUTOFF {
                 return Err("Quartet value exceeds bucket 14 cutoff");
             }
@@ -398,6 +365,7 @@ pub fn decode_rust(input: &str) -> PyResult<Vec<u8>> {
     output.truncate(len);
     Ok(output)
 }
+
 #[pyfunction]
 #[pyo3(name = "decode_u32")]
 pub fn decode_u32_py(quartet: Vec<char>) -> PyResult<u32> {
@@ -438,6 +406,17 @@ mod tests {
         assert_eq!(CHARS_A1.len(), N1);
         assert_eq!(CHARS_A2.len(), N2);
         assert_eq!(CHARS_A3.len(), N3);
+    }
+
+    #[test]
+    fn test_disjoint_alphabets() {
+        use std::collections::HashSet;
+        let s1: HashSet<char> = CHARS_A1.iter().copied().collect();
+        let s2: HashSet<char> = CHARS_A2.iter().copied().collect();
+        let s3: HashSet<char> = CHARS_A3.iter().copied().collect();
+        assert!(s1.is_disjoint(&s2), "A1 and A2 overlap: {:?}", s1.intersection(&s2));
+        assert!(s1.is_disjoint(&s3), "A1 and A3 overlap: {:?}", s1.intersection(&s3));
+        assert!(s2.is_disjoint(&s3), "A2 and A3 overlap: {:?}", s2.intersection(&s3));
     }
 
     #[test]
