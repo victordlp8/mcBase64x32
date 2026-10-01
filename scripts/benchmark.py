@@ -106,6 +106,8 @@ ALL_TIERS: List[TierSpec] = [
 
 def generate_payload(size: int, pattern: str) -> bytes:
     """Efficiently generate test payload without excessive memory fragmentation."""
+    if size == 0:
+        return b""
     if pattern == "zeros":
         return b"\x00" * size
 
