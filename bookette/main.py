@@ -4,7 +4,15 @@ import argparse
 import sys
 from typing import Iterable, Iterator
 
-from .bookette import encode_rust, decode_rust, encode_u32, decode_u32, MAX_BYTES_PER_PAGE
+from .bookette import (
+    PageDecoder,
+    PageEncoder,
+    decode_rust,
+    decode_u32,
+    encode_rust,
+    encode_u32,
+    MAX_BYTES_PER_PAGE,
+)
 
 CHARS_PER_PAGE = 1024
 BYTES_PAGE_1 = 1020
@@ -26,115 +34,22 @@ def decode(text_in_bookette: str) -> bytes:
 
 def encode_pages(payload: bytes) -> Iterator[str]:
     """Genuine streaming generator: encodes and yields 1,024-character pages on demand.
-    
-    Processes the input chunk by chunk without pre-encoding the entire payload.
+
+    Page framing is built in Rust (see :class:`PageEncoder`); the global length header sits in
+    Quartet 0 of page 1, later pages carry 1,024 payload bytes each, and every page is padded to
+    256 quartets. Wrapping the native iterator in a generator keeps the public API lazy and
+    preserves ``types.GeneratorType``.
     """
-    total_len = len(payload)
-    
-    # --- Page 1 ---
-    # Quartet 0 is the global payload length header L
-    header_quartet = encode_u32(total_len)
-    p1_data = payload[:BYTES_PAGE_1]
-    
-    p1_quartets = [header_quartet]
-    for i in range(0, len(p1_data), 4):
-        chunk = p1_data[i:i + 4]
-        if len(chunk) < 4:
-            chunk = chunk + b"\x00" * (4 - len(chunk))
-        val = int.from_bytes(chunk, "little")
-        p1_quartets.append(encode_u32(val))
-        
-    # Pad Page 1 to 256 quartets (1,024 characters)
-    while len(p1_quartets) < 256:
-        p1_quartets.append(NULL_QUARTET)
-        
-    yield "".join(p1_quartets)
-    
-    # --- Pages 2..N ---
-    offset = BYTES_PAGE_1
-    while offset < total_len:
-        page_data = payload[offset:offset + BYTES_SUBSEQUENT]
-        page_quartets = []
-        for i in range(0, len(page_data), 4):
-            chunk = page_data[i:i + 4]
-            if len(chunk) < 4:
-                chunk = chunk + b"\x00" * (4 - len(chunk))
-            val = int.from_bytes(chunk, "little")
-            page_quartets.append(encode_u32(val))
-            
-        # Pad last page to 256 quartets (1,024 characters)
-        while len(page_quartets) < 256:
-            page_quartets.append(NULL_QUARTET)
-            
-        yield "".join(page_quartets)
-        offset += BYTES_SUBSEQUENT
+    yield from PageEncoder(payload)
 
 
 def decode_pages(pages: Iterable[str]) -> Iterator[bytes]:
-    """Genuine streaming generator: consumes pages one by one from an iterable and yields decoded byte chunks."""
-    pages_iter = iter(pages)
-    try:
-        first_page = next(pages_iter)
-    except StopIteration:
-        return
+    """Genuine streaming generator: consumes pages one by one from an iterable and yields decoded byte chunks.
 
-    if len(first_page) != CHARS_PER_PAGE:
-        raise ValueError(f"Page 1 has invalid length: {len(first_page)} (must be 1024 characters)")
-
-    # Quartet 0 on Page 1 is the global length header L
-    q0_chars = [first_page[0], first_page[1], first_page[2], first_page[3]]
-    total_len = decode_u32(q0_chars)
-    if total_len == 0:
-        return
-
-    remaining = total_len
-
-    # --- Page 1 data (up to 255 quartets = 1020 bytes) ---
-    p1_bytes_needed = min(remaining, BYTES_PAGE_1)
-    p1_q_needed = (p1_bytes_needed + 3) // 4
-
-    p1_buf = bytearray()
-    for q_idx in range(1, 1 + p1_q_needed):
-        q_chars = [
-            first_page[q_idx * 4],
-            first_page[q_idx * 4 + 1],
-            first_page[q_idx * 4 + 2],
-            first_page[q_idx * 4 + 3],
-        ]
-        val = decode_u32(q_chars)
-        p1_buf.extend(val.to_bytes(4, "little"))
-
-    p1_chunk = bytes(p1_buf[:p1_bytes_needed])
-    remaining -= len(p1_chunk)
-    yield p1_chunk
-
-    # --- Subsequent Pages 2..N (up to 256 quartets = 1024 bytes per page) ---
-    while remaining > 0:
-        try:
-            page = next(pages_iter)
-        except StopIteration:
-            raise ValueError(f"Truncated input: expected {remaining} more bytes but no more pages provided")
-
-        if len(page) != CHARS_PER_PAGE:
-            raise ValueError(f"Page has invalid length: {len(page)} (must be 1024 characters)")
-
-        page_bytes_needed = min(remaining, BYTES_SUBSEQUENT)
-        page_q_needed = (page_bytes_needed + 3) // 4
-
-        p_buf = bytearray()
-        for q_idx in range(page_q_needed):
-            q_chars = [
-                page[q_idx * 4],
-                page[q_idx * 4 + 1],
-                page[q_idx * 4 + 2],
-                page[q_idx * 4 + 3],
-            ]
-            val = decode_u32(q_chars)
-            p_buf.extend(val.to_bytes(4, "little"))
-
-        p_chunk = bytes(p_buf[:page_bytes_needed])
-        remaining -= len(p_chunk)
-        yield p_chunk
+    Consuming and decoding happen in Rust (see :class:`PageDecoder`); pages are pulled from any
+    iterable on demand, so memory stays bounded by a single page regardless of payload size.
+    """
+    yield from PageDecoder(pages)
 
 
 def main():
