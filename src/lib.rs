@@ -300,9 +300,12 @@ pub fn decode_rust(input: &str) -> PyResult<Vec<u8>> {
         return Ok(Vec::new());
     }
 
-    let total_data_quartets = (len + 3) / 4;
-    let mut output = Vec::with_capacity(total_data_quartets * 4);
-
+    // `len` comes from the untrusted header; `div_ceil` avoids the `len + 3` overflow
+    // that `(len + 3) / 4` would hit on 32-bit targets for `u32::MAX`.
+    let total_data_quartets = len.div_ceil(4);
+    let max_possible_quartets = chars.len().saturating_sub(4) / 4;
+    let safe_capacity_quartets = total_data_quartets.min(max_possible_quartets);
+    let mut output = Vec::with_capacity(safe_capacity_quartets * 4);
     // If formatted as pages (multiples of 1024 chars):
     if chars.len() >= CHARS_PER_PAGE && chars.len() % CHARS_PER_PAGE == 0 {
         let total_pages = chars.len() / CHARS_PER_PAGE;
@@ -458,5 +461,16 @@ mod tests {
         let enc2045 = encode_rust(&p2045);
         assert_eq!(enc2045.chars().count(), 3072);
         assert_eq!(decode_rust(&enc2045).unwrap(), p2045);
+    }
+
+    #[test]
+    fn test_untrusted_header_memory_bomb() {
+        // Quartet 0 encoding u32::MAX (4,294,967,295 B)
+        let max_header = encode_u32(u32::MAX);
+        let input: String = max_header.iter().collect();
+        // Passing only the 4-char header with an impossible 4GB length must return an error
+        // cleanly and NOT crash with Out Of Memory.
+        let result = decode_rust(&input);
+        assert!(result.is_err());
     }
 }
